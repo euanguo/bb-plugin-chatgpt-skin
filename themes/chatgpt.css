@@ -117,6 +117,73 @@
   border-radius: 1.5625rem !important; /* 25px */
 }
 
+/* ---- Per-corner resets -------------------------------------------------
+ * The ladder above writes `border-radius` as a SHORTHAND with !important, which
+ * sets all four corners. Tailwind's per-corner utilities (`rounded-r-none`, and
+ * the `rounded-l-md` / `rounded-r-md` pairs) then lose, because a shorthand
+ * beats a longhand of the same or lower specificity.
+ *
+ * That silently broke BB's SplitButton: it joins two halves by giving the first
+ * `rounded-r-none` and the second `rounded-l-none`, so the pair reads as one
+ * control. With the resets overridden, each half grew its own full radius and the
+ * seam became two bumps (the "editor icon" control). These rules restore the
+ * resets, and must stay AFTER the ladder. */
+.bb-app-shell .rounded-l-none,
+[data-bb-portaled-overlay] .rounded-l-none {
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+}
+
+.bb-app-shell .rounded-r-none,
+[data-bb-portaled-overlay] .rounded-r-none {
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+.bb-app-shell .rounded-t-none,
+[data-bb-portaled-overlay] .rounded-t-none {
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+}
+
+.bb-app-shell .rounded-b-none,
+[data-bb-portaled-overlay] .rounded-b-none {
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+/* Same reasoning for the one-sided radius steps Tailwind ships
+ * (`rounded-l-md`, `rounded-r-md`, …). */
+.bb-app-shell .rounded-l-sm, [data-bb-portaled-overlay] .rounded-l-sm {
+  border-top-left-radius: 0.46875rem !important;
+  border-bottom-left-radius: 0.46875rem !important;
+}
+
+.bb-app-shell .rounded-r-sm, [data-bb-portaled-overlay] .rounded-r-sm {
+  border-top-right-radius: 0.46875rem !important;
+  border-bottom-right-radius: 0.46875rem !important;
+}
+
+.bb-app-shell .rounded-l-md, [data-bb-portaled-overlay] .rounded-l-md {
+  border-top-left-radius: 0.625rem !important;
+  border-bottom-left-radius: 0.625rem !important;
+}
+
+.bb-app-shell .rounded-r-md, [data-bb-portaled-overlay] .rounded-r-md {
+  border-top-right-radius: 0.625rem !important;
+  border-bottom-right-radius: 0.625rem !important;
+}
+
+.bb-app-shell .rounded-l-lg, [data-bb-portaled-overlay] .rounded-l-lg {
+  border-top-left-radius: 0.78125rem !important;
+  border-bottom-left-radius: 0.78125rem !important;
+}
+
+.bb-app-shell .rounded-r-lg, [data-bb-portaled-overlay] .rounded-r-lg {
+  border-top-right-radius: 0.78125rem !important;
+  border-bottom-right-radius: 0.78125rem !important;
+}
+
 /* ---- Corner shape (superellipse) --------------------------------------
  * This is the property that keeps ChatGPT's corners from looking "square":
  * a superellipse exponent of 1.5 makes the curve leave the edge more
@@ -422,8 +489,12 @@
 [data-radix-menu-content] [role=menuitem],
 [data-radix-popper-content-wrapper] [role=option],
 [data-radix-popper-content-wrapper] [role=menuitem],
+[data-radix-popper-content-wrapper] [role=menuitemradio],
+[data-radix-popper-content-wrapper] [role=menuitemcheckbox],
 [data-bb-portaled-overlay] [role=option],
 [data-bb-portaled-overlay] [role=menuitem],
+[data-bb-portaled-overlay] [role=menuitemradio],
+[data-bb-portaled-overlay] [role=menuitemcheckbox],
 [data-bb-portaled-overlay] [role=radio] {
   border-radius: 0.9375rem !important;
 }
@@ -452,28 +523,61 @@
 [data-radix-popper-content-wrapper] [role=option]:hover,
 [data-radix-popper-content-wrapper] [role=menuitem][data-highlighted],
 [data-radix-popper-content-wrapper] [role=menuitem]:hover,
+[data-radix-popper-content-wrapper] [role=menuitemradio][data-highlighted],
+[data-radix-popper-content-wrapper] [role=menuitemradio]:hover,
+[data-radix-popper-content-wrapper] [role=menuitemcheckbox][data-highlighted],
+[data-radix-popper-content-wrapper] [role=menuitemcheckbox]:hover,
 [data-bb-portaled-overlay] [role=option][aria-selected=true],
 [data-bb-portaled-overlay] [role=option][data-highlighted],
 [data-bb-portaled-overlay] [role=option]:hover,
 [data-bb-portaled-overlay] [role=menuitem][data-highlighted],
 [data-bb-portaled-overlay] [role=menuitem]:hover,
+[data-bb-portaled-overlay] [role=menuitemradio][data-highlighted],
+[data-bb-portaled-overlay] [role=menuitemradio]:hover,
+[data-bb-portaled-overlay] [role=menuitemradio][data-state=checked],
+[data-bb-portaled-overlay] [role=menuitemcheckbox][data-highlighted],
+[data-bb-portaled-overlay] [role=menuitemcheckbox]:hover,
+[data-bb-portaled-overlay] [role=menuitemcheckbox][data-state=checked],
 [data-bb-portaled-overlay] [role=radio][data-state=on],
 [data-bb-portaled-overlay] [role=radio][aria-checked=true] {
   background-color: var(--state-hover) !important;
   color: var(--ink) !important;
 }
 
-.bb-app-shell [aria-label*="Provider, model and reasoning"] {
+/* ---- Composer option chips (one rule for the whole family) -------------
+ * Every composer chip — model, reasoning, project, environment, permission —
+ * is an OptionPicker / ProjectSelector / EnvironmentPicker trigger rendered by
+ * BB's shared Button with `OPTION_BASE_CLASS_NAME`:
+ *
+ *     h-8 w-fit max-w-full min-w-0 items-center justify-start gap-1
+ *     px-1 text-xs leading-tight
+ *
+ * That class string is the seam for "this kind of control", so the whole family
+ * is matched through it rather than through one aria-label per instance. (An
+ * earlier revision keyed off `[aria-label^="Project: "]`, which is exactly the
+ * mistake that left the neighbouring chips unstyled.)
+ *
+ * ChatGPT draws each of these as a 28px fully-rounded pill: transparent at rest,
+ * the standard 7.8% ghost wash on hover or while its menu is open. */
+.bb-app-shell [class*="h-8 w-fit max-w-full min-w-0"]:not([role]),
+.bb-app-shell [data-promptbox-project-control]:not([role]),
+.bb-app-shell [data-promptbox-shrinkable-control]:not([role]) {
   height: 1.75rem !important;
   min-height: 1.75rem !important;
   border-radius: 9999px !important;
+  border: 0 !important;
   padding: 0 0.5rem !important;
   background-color: transparent !important;
   color: var(--ink) !important;
+  transition-property: background-color, color !important;
 }
 
-.bb-app-shell [aria-label*="Provider, model and reasoning"]:hover,
-.bb-app-shell [aria-label*="Provider, model and reasoning"][data-state=open] {
+.bb-app-shell [class*="h-8 w-fit max-w-full min-w-0"]:not([role]):hover,
+.bb-app-shell [class*="h-8 w-fit max-w-full min-w-0"]:not([role])[data-state=open],
+.bb-app-shell [data-promptbox-project-control]:not([role]):hover,
+.bb-app-shell [data-promptbox-project-control]:not([role])[data-state=open],
+.bb-app-shell [data-promptbox-shrinkable-control]:not([role]):hover,
+.bb-app-shell [data-promptbox-shrinkable-control]:not([role])[data-state=open] {
   background-color: var(--state-hover) !important;
 }
 
@@ -499,14 +603,6 @@
 .bb-app-shell [data-promptbox-submit-action] svg {
   width: 1rem !important;
   height: 1rem !important;
-}
-
-.bb-app-shell [aria-label="Prompt actions"],
-.bb-app-shell [aria-label="Start voice input"] {
-  width: 1.75rem;
-  height: 1.75rem;
-  border-radius: 9999px !important;
-  transition: background-color 150ms ease-out, color 150ms ease-out;
 }
 
 /* BB's shared switch is the same 32×20 track / 16px thumb measured in
@@ -559,17 +655,17 @@
   background-color: var(--chatgpt-track-off) !important;
 }
 
-/* Prompt-stack cards are semantic composer surfaces rather than Radix
- * overlays. Align them with the same frosted ChatGPT surface so Plan, Goal,
- * Workflow, To-do and background-activity cards do not remain opaque BB gray. */
-.bb-app-shell [aria-label="Goal"],
-.bb-app-shell [aria-label="Prompt mode"],
-.bb-app-shell [aria-label="Workflow"],
-.bb-app-shell [aria-label="To-do list"],
-.bb-app-shell [aria-label="Background activity"],
-.bb-app-shell [aria-label="Background activities"],
-.bb-app-shell [aria-label="Background commands"],
-.bb-app-shell [aria-label="Background agents"] {
+/* ---- Prompt-stack cards (one rule for the whole family) ---------------
+ * Goal, Prompt mode, Workflow, To-do, Background activity/commands/agents and
+ * Machine status all render through BB's shared `PromptStackCard`, whose chrome
+ * is exactly `rounded-lg border border-border bg-surface-raised-solid`. Keying
+ * off that shared signature covers every card — including ones added later —
+ * instead of listing one aria-label per card type (the previous approach, which
+ * had to be re-extended each time a new card shipped).
+ *
+ * These are semantic composer surfaces rather than Radix overlays, so they take
+ * the same frosted ChatGPT surface as the menus. */
+.bb-app-shell .rounded-lg.border.border-border.bg-surface-raised-solid {
   background-color: var(--chatgpt-elevated) !important;
   border-color: var(--chatgpt-elevated-ring) !important;
   box-shadow: 0 0 0 0.5px var(--chatgpt-elevated-ring),
@@ -592,6 +688,19 @@
   background-color: var(--popover) !important;
   color: var(--popover-foreground) !important;
   box-shadow: none;
+}
+
+/* Fallback for tooltips that do NOT carry the portal-scope attribute. BB's own
+ * shared tooltip sets `bg-primary`, so any tip that escapes both scopes above
+ * renders as a saturated blue chip (the sidebar footer's "Host Monitor" label
+ * was the visible case). A tooltip is always a floating surface in ChatGPT's
+ * design — there is no semantic variant that should be blue — so this last rule
+ * is deliberately unscoped. It is last so the scoped rules keep precedence for
+ * the compact-vs-rich distinction. */
+[role=tooltip] {
+  border-radius: 1.25rem !important;
+  background-color: var(--popover) !important;
+  color: var(--popover-foreground) !important;
 }
 
 .bb-app-shell .bb-sidebar-hover-actions-inset {
@@ -670,28 +779,54 @@
   backdrop-filter: blur(16px);
 }
 
-/* ChatGPT's composer footer controls are all pills: 28px tall, fully rounded,
- * transparent until hover, then the standard 7.8% ghost wash. BB renders the
- * permission and project chips as 24/32px rounded rectangles instead. */
-.bb-app-shell [aria-label="Permission mode"],
-.bb-app-shell [aria-label^="Project: "],
-.bb-app-shell [aria-label="Prompt actions"],
-.bb-app-shell [aria-label="Start voice input"] {
-  height: 1.75rem !important;
-  min-height: 1.75rem !important;
-  border-radius: 9999px !important;
-  border: 0 !important;
-  padding: 0 0.5rem !important;
-  background-color: transparent !important;
-  transition-property: background-color, color !important;
+/* ---- Header / toolbar icon buttons ------------------------------------
+ * BB renders every header and toolbar icon button through
+ * `COARSE_POINTER_HEADER_ICON_BUTTON_CLASS`, whose box is
+ * `h-[28px] w-[28px] rounded-md p-0`. Measured on the live ChatGPT settings
+ * page, the same 28px icon button is `rounded-lg` — 12.5px — not `rounded-md`
+ * (10px). That one-step difference is why the toolbar, panel and dialog-chrome
+ * icons all read as "slightly too square" next to ChatGPT.
+ *
+ * The `h-[28px] w-[28px]` box is the family signature, so this covers every icon
+ * button regardless of which aria-label it carries. */
+.bb-app-shell button[class*="h-[28px] w-[28px]"]:not([role]),
+.bb-app-shell button.h-7.w-7:not([role]) {
+  border-radius: 0.78125rem !important; /* 12.5px, ChatGPT's rounded-lg */
 }
 
-.bb-app-shell [aria-label="Permission mode"]:hover,
-.bb-app-shell [aria-label^="Project: "]:hover,
-.bb-app-shell [aria-label="Permission mode"][data-state=open],
-.bb-app-shell [aria-label^="Project: "][data-state=open],
-.bb-app-shell [aria-label="Prompt actions"]:hover,
-.bb-app-shell [aria-label="Start voice input"]:hover {
+/* ---- Composer icon controls -------------------------------------------
+ * The composer's icon actions (attach "+", collapse caret, voice) all render
+ * through BB's shared Button with `COARSE_POINTER_PROMPT_ICON_ACTION_BUTTON_CLASS`
+ * (`size-auto h-8 px-2`), and they all live inside the composer's action rows
+ * (`data-promptbox-standard-actions` / `data-promptbox-action-row`).
+ *
+ * ChatGPT gives each a 28px circle. The selector is scoped to the action rows so
+ * it cannot reach a menu: an earlier revision matched `[aria-label="Prompt
+ * actions"]`, which is the label on BOTH the "+" trigger and its dropdown, so the
+ * dropdown itself was being rounded into a 28px pill and squashed.
+ *
+ * The `:not([role])` guard is a deliberate backstop for that whole class of bug:
+ * a control we restyle is always a bare <button>, never a role=menu/listbox/
+ * dialog surface, so excluding those roles means a shared aria-label can never
+ * again drag an overlay into a button rule. */
+.bb-app-shell [data-promptbox-standard-actions] button:not([role]),
+.bb-app-shell [data-promptbox-action-row] button:not([role]),
+.bb-app-shell [data-promptbox-submit-group] button:not([role]),
+.bb-app-shell [data-promptbox-icon-only-control]:not([role]) {
+  width: 1.75rem !important;
+  height: 1.75rem !important;
+  min-width: 1.75rem !important;
+  min-height: 1.75rem !important;
+  padding: 0 !important;
+  border-radius: 9999px !important;
+  background-color: transparent !important;
+  transition: background-color 150ms ease-out, color 150ms ease-out !important;
+}
+
+.bb-app-shell [data-promptbox-standard-actions] button:not([role]):hover,
+.bb-app-shell [data-promptbox-action-row] button:not([role]):hover,
+.bb-app-shell [data-promptbox-submit-group] button:not([role]):hover,
+.bb-app-shell [data-promptbox-icon-only-control]:not([role]):hover {
   background-color: var(--state-hover) !important;
 }
 
@@ -706,6 +841,27 @@
 [data-radix-select-content] .bg-background,
 [data-radix-dropdown-menu-content] .bg-background,
 [data-radix-popover-content] .bg-background {
+  background-color: transparent !important;
+}
+
+/* The same plate appears inside BB's own composer overlays, which are NOT
+ * portaled: the slash/mention menu's section header (`sticky top-0
+ * bg-background`) and the model picker's provider tab strip
+ * (`bg-surface-recessed`, i.e. #141414 — a step DARKER than the #2d2d2d menu it
+ * sits in). Both read as a black bar across a translucent menu. ChatGPT has no
+ * such plate; its section headings are plain muted text on the menu surface, and
+ * its provider strip is the same elevated surface as the menu.
+ *
+ * Scoped to the shell, and only to elements that are INSIDE a menu-like
+ * container, so a legitimate page-level `bg-background` is untouched. */
+.bb-app-shell .overflow-hidden.rounded-md.border.border-border.bg-popover .bg-background,
+.bb-app-shell .overflow-hidden.rounded-md.border.border-border.bg-popover .bg-surface-recessed,
+.bb-app-shell [role=dialog] .bg-background,
+.bb-app-shell [role=dialog] .bg-surface-recessed,
+.bb-app-shell [role=listbox] .bg-background,
+.bb-app-shell [role=listbox] .bg-surface-recessed,
+.bb-app-shell [role=menu] .bg-background,
+.bb-app-shell [role=menu] .bg-surface-recessed {
   background-color: transparent !important;
 }
 
