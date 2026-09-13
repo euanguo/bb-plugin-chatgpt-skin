@@ -545,9 +545,10 @@
 }
 
 /* ---- Composer option chips (one rule for the whole family) -------------
- * Every composer chip — model, reasoning, project, environment, permission —
- * is an OptionPicker / ProjectSelector / EnvironmentPicker trigger rendered by
- * BB's shared Button with `OPTION_BASE_CLASS_NAME`:
+ * Every composer chip — model, reasoning, project, environment, permission,
+ * branch — is an OptionPicker / ProjectSelector / EnvironmentPicker /
+ * BranchPicker trigger rendered by BB's shared Button with
+ * `OPTION_BASE_CLASS_NAME`:
  *
  *     h-8 w-fit max-w-full min-w-0 items-center justify-start gap-1
  *     px-1 text-xs leading-tight
@@ -557,11 +558,18 @@
  * earlier revision keyed off `[aria-label^="Project: "]`, which is exactly the
  * mistake that left the neighbouring chips unstyled.)
  *
+ * The match is a `button` element, NOT a role exclusion: `BranchPicker` renders
+ * the same chip with `role="combobox"`, so an earlier `:not([role])` guard
+ * silently dropped the third composer chip ("Unknown checkout"). Overlay
+ * surfaces are never <button>, so scoping to the tag is the guard that actually
+ * holds — it cannot drag a menu in, and it cannot drop a combobox chip.
+ *
  * ChatGPT draws each of these as a 28px fully-rounded pill: transparent at rest,
  * the standard 7.8% ghost wash on hover or while its menu is open. */
-.bb-app-shell [class*="h-8 w-fit max-w-full min-w-0"]:not([role]),
-.bb-app-shell [data-promptbox-project-control]:not([role]),
-.bb-app-shell [data-promptbox-shrinkable-control]:not([role]) {
+.bb-app-shell button[class*="h-8 w-fit max-w-full min-w-0"],
+.bb-app-shell button[data-promptbox-project-control],
+.bb-app-shell button[data-promptbox-shrinkable-control],
+.bb-app-shell button[data-promptbox-icon-only-control] {
   height: 1.75rem !important;
   min-height: 1.75rem !important;
   border-radius: 9999px !important;
@@ -572,12 +580,14 @@
   transition-property: background-color, color !important;
 }
 
-.bb-app-shell [class*="h-8 w-fit max-w-full min-w-0"]:not([role]):hover,
-.bb-app-shell [class*="h-8 w-fit max-w-full min-w-0"]:not([role])[data-state=open],
-.bb-app-shell [data-promptbox-project-control]:not([role]):hover,
-.bb-app-shell [data-promptbox-project-control]:not([role])[data-state=open],
-.bb-app-shell [data-promptbox-shrinkable-control]:not([role]):hover,
-.bb-app-shell [data-promptbox-shrinkable-control]:not([role])[data-state=open] {
+.bb-app-shell button[class*="h-8 w-fit max-w-full min-w-0"]:hover,
+.bb-app-shell button[class*="h-8 w-fit max-w-full min-w-0"][data-state=open],
+.bb-app-shell button[data-promptbox-project-control]:hover,
+.bb-app-shell button[data-promptbox-project-control][data-state=open],
+.bb-app-shell button[data-promptbox-shrinkable-control]:hover,
+.bb-app-shell button[data-promptbox-shrinkable-control][data-state=open],
+.bb-app-shell button[data-promptbox-icon-only-control]:hover,
+.bb-app-shell button[data-promptbox-icon-only-control][data-state=open] {
   background-color: var(--state-hover) !important;
 }
 
@@ -794,25 +804,50 @@
   border-radius: 0.78125rem !important; /* 12.5px, ChatGPT's rounded-lg */
 }
 
+/* ---- Tab pills and their close affordance -----------------------------
+ * BB's `TabPill` is a two-part control: an outer `group/tab-pill` wrapper that
+ * carries the hover wash, an inner select button (`flex h-full min-w-0
+ * items-center rounded-md`), and — when the tab is closable — a sibling close
+ * button marked `data-tab-pill-close`.
+ *
+ * `group/tab-pill` and `data-tab-pill-close` are the component's own seams, so
+ * both halves are matched by what they are, not by an aria-label. This is why
+ * "Show thread info panel" (a tab pill) was missed by the header-icon rule: it
+ * is not a `h-[28px] w-[28px]` icon button at all, even though it renders 28px
+ * tall. ChatGPT draws a tab pill at its rounded-lg step (12.5px) and a small
+ * close affordance at 10px — measured on the live app: the composer tab pill is
+ * 12.5px/30px, the row-hover affordances 10px/20px. */
+.bb-app-shell .group\/tab-pill,
+.bb-app-shell .group\/tab-pill > button:not([data-tab-pill-close]) {
+  border-radius: 0.78125rem !important; /* 12.5px */
+}
+
+.bb-app-shell [data-tab-pill-close] {
+  border-radius: 0.625rem !important; /* 10px */
+}
+
 /* ---- Composer icon controls -------------------------------------------
  * The composer's icon actions (attach "+", collapse caret, voice) all render
- * through BB's shared Button with `COARSE_POINTER_PROMPT_ICON_ACTION_BUTTON_CLASS`
- * (`size-auto h-8 px-2`), and they all live inside the composer's action rows
- * (`data-promptbox-standard-actions` / `data-promptbox-action-row`).
+ * through BB's shared Button with `COARSE_POINTER_PROMPT_ICON_ACTION_BUTTON_CLASS`:
  *
- * ChatGPT gives each a 28px circle. The selector is scoped to the action rows so
- * it cannot reach a menu: an earlier revision matched `[aria-label="Prompt
- * actions"]`, which is the label on BOTH the "+" trigger and its dropdown, so the
- * dropdown itself was being rounded into a 28px pill and squashed.
+ *     size-auto h-8 px-2 transition-all
  *
- * The `:not([role])` guard is a deliberate backstop for that whole class of bug:
- * a control we restyle is always a bare <button>, never a role=menu/listbox/
- * dialog surface, so excluding those roles means a shared aria-label can never
- * again drag an overlay into a button rule. */
-.bb-app-shell [data-promptbox-standard-actions] button:not([role]),
-.bb-app-shell [data-promptbox-action-row] button:not([role]),
-.bb-app-shell [data-promptbox-submit-group] button:not([role]),
-.bb-app-shell [data-promptbox-icon-only-control]:not([role]) {
+ * That class string is the family signature, so this matches the icon actions by
+ * what they ARE rather than by where they sit.
+ *
+ * Two earlier revisions of this rule both mis-fired, and the fixes are worth
+ * keeping in mind:
+ *   1. `[aria-label="Prompt actions"]` also matched the dropdown that the button
+ *      opens (shared label), squashing the menu into a 28px pill.
+ *   2. Scoping to `[data-promptbox-standard-actions] button` was worse: the
+ *      composer renders its option CHIPS (model, project, branch, permission)
+ *      inside that same container, so every chip was forced to 28×28 and lost
+ *      its pill. Container scoping is the trap; the signature is the seam.
+ *
+ * ChatGPT gives each of these a 28px circle. Keying off the signature also
+ * squares the collapse caret, which BB sizes `w-6 h-8` (a rectangle) via
+ * `PROMPT_STACK_EDGE_CARET_BUTTON_WIDTH_CLASS`. */
+.bb-app-shell button[class*="size-auto h-8 px-2"] {
   width: 1.75rem !important;
   height: 1.75rem !important;
   min-width: 1.75rem !important;
@@ -823,10 +858,7 @@
   transition: background-color 150ms ease-out, color 150ms ease-out !important;
 }
 
-.bb-app-shell [data-promptbox-standard-actions] button:not([role]):hover,
-.bb-app-shell [data-promptbox-action-row] button:not([role]):hover,
-.bb-app-shell [data-promptbox-submit-group] button:not([role]):hover,
-.bb-app-shell [data-promptbox-icon-only-control]:not([role]):hover {
+.bb-app-shell button[class*="size-auto h-8 px-2"]:hover {
   background-color: var(--state-hover) !important;
 }
 
