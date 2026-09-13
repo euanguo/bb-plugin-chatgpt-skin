@@ -499,6 +499,26 @@
   border-radius: 0.9375rem !important;
 }
 
+/* ---- Menu rows that are NOT role=menuitem -----------------------------
+ * BB renders several menu rows as plain <button> elements rather than Radix
+ * items. They opt into the shared hover behaviour by carrying the literal class
+ * string `data-[last-hovered]:bg-state-hover data-[last-hovered]:text-foreground`
+ * (from `MENU_ITEM_LAST_HOVERED_CLASS`). Note that the *attribute* those
+ * variants refer to is only set while the row is the last-hovered one, so it is
+ * NOT a stable hook at rest — the class string is.
+ *
+ * These rows ship `rounded-sm`, which under the ladder above is 7.5px, so the
+ * model picker's "Handoff to new thread" / "More models" rows read as too
+ * square next to the role=option rows directly above them. Keying the radius
+ * off the shared class string fixes the whole family at once, including rows
+ * added later. The hover fill is already correct: BB's own
+ * `hover:bg-state-hover` consumes the themed --state-hover token. */
+.bb-app-shell [class*="data-[last-hovered]:bg-state-hover"],
+[data-radix-popper-content-wrapper] [class*="data-[last-hovered]:bg-state-hover"],
+[data-bb-portaled-overlay] [class*="data-[last-hovered]:bg-state-hover"] {
+  border-radius: 0.9375rem !important; /* 15px, ChatGPT's menu-item step */
+}
+
 /* ---- Sidebar row hover card -------------------------------------------
  * Hovering a thread row opens a branch/thread summary card. It is authored by
  * the nested-sidebar plugin rather than BB itself, so it never matched the
@@ -681,6 +701,27 @@
   box-shadow: 0 0 0 0.5px var(--chatgpt-elevated-ring),
     var(--chatgpt-elevated-shadow) !important;
   backdrop-filter: blur(8px);
+}
+
+/* ---- Activity rows inside prompt-stack cards --------------------------
+ * BB's shared `activityRowClass("active", …)` paints an ACTIVE row with
+ * `rounded-md bg-background/70 px-2 py-1 shadow-xs ring-1 ring-border/60`. On
+ * the canvas that reads as a subtle inset chip, but the cards above are now a
+ * translucent elevated surface — so the same plate becomes an opaque dark block
+ * sitting on top of the frosted card (the Goal card's header group, and the
+ * "Clear active Goal" close button that shares the row).
+ *
+ * ChatGPT has no such plate: its card header is the card surface itself, with
+ * only a hairline divider before the close affordance. So the active-row fill
+ * is made transparent and the ring dropped, while the hover highlight (which BB
+ * applies on the row button, not the group) is left to the shared state rules.
+ *
+ * The signature is the shared class pair, so this covers every active activity
+ * row — Goal, prompt mode, workflow, to-do, background agents — not just Goal. */
+.bb-app-shell .rounded-md.bg-background\/70,
+.bb-app-shell .rounded-md.bg-background\/70.ring-1 {
+  background-color: transparent !important;
+  box-shadow: none !important;
 }
 
 /* ---- Tooltip ----------------------------------------------------------
