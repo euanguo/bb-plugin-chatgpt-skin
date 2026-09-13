@@ -573,6 +573,16 @@
  *     h-8 w-fit max-w-full min-w-0 items-center justify-start gap-1
  *     px-1 text-xs leading-tight
  *
+ * The stable part of that class string is the run
+ *
+ *     w-fit max-w-full min-w-0 items-center justify-start gap-1 px-1
+ *     text-xs leading-tight
+ *
+ * — NOT the leading `h-8`. The follow-up composer's footer chips (the
+ * permission picker under an active thread) reuse the same component but
+ * override the height to `h-6`, so keying on `h-8 w-fit…` silently dropped
+ * them. The selector below therefore matches the height-independent run.
+ *
  * That class string is the seam for "this kind of control", so the whole family
  * is matched through it rather than through one aria-label per instance. (An
  * earlier revision keyed off `[aria-label^="Project: "]`, which is exactly the
@@ -584,9 +594,17 @@
  * surfaces are never <button>, so scoping to the tag is the guard that actually
  * holds — it cannot drag a menu in, and it cannot drop a combobox chip.
  *
- * ChatGPT draws each of these as a 28px fully-rounded pill: transparent at rest,
- * the standard 7.8% ghost wash on hover or while its menu is open. */
-.bb-app-shell button[class*="h-8 w-fit max-w-full min-w-0"],
+ * ChatGPT draws each of these as a fully-rounded 28px pill: transparent at rest,
+ * the standard 7.8% ghost wash on hover or while its menu is open. The height is
+ * therefore pinned. BB ships two
+ * heights for this one component — `h-8` (32px) in the composer's action row
+ * and `h-6` (24px) in the follow-up composer's footer strip — and the footer
+ * strip was a hard 24px box with `overflow-hidden`. Pinning 28px there used to
+ * make the chip taller than its row, so its rounded hover highlight was sliced
+ * flat top and bottom: the "clipped, irregular" hover on that row. The row
+ * itself is now 28px (see the footer-strip rule below), so 28px chips fit and
+ * both instances land on ChatGPT's measured height. */
+.bb-app-shell button[class*="w-fit max-w-full min-w-0"],
 .bb-app-shell button[data-promptbox-project-control],
 .bb-app-shell button[data-promptbox-shrinkable-control],
 .bb-app-shell button[data-promptbox-icon-only-control] {
@@ -600,8 +618,8 @@
   transition-property: background-color, color !important;
 }
 
-.bb-app-shell button[class*="h-8 w-fit max-w-full min-w-0"]:hover,
-.bb-app-shell button[class*="h-8 w-fit max-w-full min-w-0"][data-state=open],
+.bb-app-shell button[class*="w-fit max-w-full min-w-0"]:hover,
+.bb-app-shell button[class*="w-fit max-w-full min-w-0"][data-state=open],
 .bb-app-shell button[data-promptbox-project-control]:hover,
 .bb-app-shell button[data-promptbox-project-control][data-state=open],
 .bb-app-shell button[data-promptbox-shrinkable-control]:hover,
@@ -722,6 +740,35 @@
 .bb-app-shell .rounded-md.bg-background\/70.ring-1 {
   background-color: transparent !important;
   box-shadow: none !important;
+}
+
+/* ---- Follow-up composer footer strip ----------------------------------
+ * Under an active thread BB renders a footer strip beneath the composer
+ * (`data-follow-up-composer-footer`) holding the project summary, the
+ * permission picker and the context-window indicator. BB pins it to a hard
+ * 24px (`min-h-6 max-h-6`) with `overflow-hidden`, but the context indicator
+ * inside it is a 32px hover target (`-m-1 inline-flex size-8`) — taller than
+ * its own row, so the row sliced the indicator's circular hover highlight flat
+ * top and bottom. That is the "clipped, irregular hover" on this row.
+ *
+ * Measured on the live ChatGPT composer: the equivalent strip is 28px tall and
+ * its context indicator is a 16px inline glyph with no oversized circle. So the
+ * row is given ChatGPT's 28px and the indicator is capped to a 24px box that
+ * fits inside it, with the negative margin removed. `data-follow-up-composer-
+ * footer` is BB's own hook for this strip, so the row rule covers every
+ * instance of it. */
+.bb-app-shell [data-follow-up-composer-footer] {
+  min-height: 1.75rem !important;
+  max-height: 1.75rem !important;
+}
+
+.bb-app-shell [data-follow-up-composer-footer] [aria-label^="Context window"],
+.bb-app-shell [data-follow-up-composer-footer] [aria-label^="Estimated context"] {
+  margin: 0 !important;
+  width: 1.5rem !important;
+  height: 1.5rem !important;
+  min-width: 1.5rem !important;
+  min-height: 1.5rem !important;
 }
 
 /* ---- Tooltip ----------------------------------------------------------
