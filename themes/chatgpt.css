@@ -1,0 +1,772 @@
+/* bb-plugin-chatgpt-skin — the ChatGPT desktop palette for BB.
+ *
+ * HOW THIS WORKS
+ *   BB's own UI is token-driven: its Button renders `hover:bg-state-hover`,
+ *   its Input `border-input placeholder:text-muted-foreground`, its Dialog
+ *   `bg-background shadow-sm`. The authoritative component source ships with
+ *   the plugin scaffold (components/ui/, generated from the BB app), which is
+ *   where those class names were read. So most of this file is a token
+ *   override: set the token, and every component — including ones added later —
+ *   follows.
+ *
+ *   A few ChatGPT details do not fit through BB's token set, because BB has one
+ *   radius and one popover surface where ChatGPT has several. Those are handled
+ *   in section 5, each with the measurement that justifies it. Nothing there is
+ *   speculative.
+ *
+ * WHERE THE VALUES COME FROM
+ *   Every number was read out of the running ChatGPT desktop app over CDP. The
+ *   raw captures are in ../research/chatgpt-skin/collector/out/, and
+ *   ../research/chatgpt-skin/verify/ cross-checks the live BB against them.
+ *     tokens.json            1329 computed custom properties
+ *     states.json            forced :hover/:active/:focus-visible deltas
+ *     overlays.json          menu / dialog surfaces + their item states
+ *     tooltips.json          both tooltip families
+ *     controls-settings.json the switch, in both positions
+ *
+ *   ChatGPT derives its palette from four base params
+ *   (--codex-base-surface #181818, --codex-base-ink #ffffff,
+ *   --codex-base-accent #339cff, --codex-base-contrast 60) plus a 264-entry
+ *   `--color-*` role layer. Its role names are not BB's, so this file
+ *   translates rather than copies: the anchors below are ChatGPT's own anchors,
+ *   and BB re-derives its neutral ramp from them — the same derivation model
+ *   ChatGPT uses.
+ *
+ * MODE HANDLING
+ *   BB stores one palette server-side and layers a per-client light/dark mode
+ *   on top, so both blocks are written: `:root, .light` and `.dark`. `:root`
+ *   also matches in dark mode, so mode-independent values (fonts, the corner
+ *   shape) live only in the first block.
+ */
+
+/* ===================================================================== */
+/* 1. Mode-independent: typography and corner geometry                    */
+/* ===================================================================== */
+
+:root,
+.light {
+  /* ChatGPT ships "OpenAI Sans" over the OS stack; on macOS that resolves to
+   * the stacks below (--font-openai-sans / --font-sans in tokens.json). */
+  --font-sans: "OpenAI Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* ---- Corner radius -------------------------------------------------
+   * ChatGPT does not use one radius. Every radius is a base times
+   * --corner-radius-scale:
+   *     .rounded-md   = calc(.5rem  * 1.25) = 10px
+   *     .rounded-xl   = calc(.75rem * 1.25) = 15px
+   *     .rounded-2xl  = calc(1rem   * 1.25) = 20px
+   * and that scale only becomes 1.25 inside
+   *     @supports (corner-shape: superellipse(1.5))
+   * — without support it stays 1 and the radii are the stock Tailwind sizes.
+   * BB derives all of its radii from --radius, so 10px here matches ChatGPT's
+   * button/input/card step, which is the most common one. The larger steps
+   * (menu 20px) are handled in section 5. */
+  /* BB derives sm/md/lg/xl from --radius with a flat -4/-2/+4px step, which
+   * does not match ChatGPT's scale. ChatGPT multiplies a 1.25 factor into
+   * every step (gated on corner-shape support), so its ladder is:
+   *     sm 5px · md 10px · lg 12.5px · xl 15px · 2xl 20px · 3xl 25px
+   * BB's rounded-md button therefore renders 8px against ChatGPT's 10px.
+   * Each step is stated explicitly instead of derived from --radius. */
+  --radius: 0.625rem;
+}
+
+/* ---- Radius ladder -----------------------------------------------------
+ * BB compiles Tailwind v4 with @theme inline, so every rounded-* utility is
+ * inlined as calc(var(--radius) - 2px) at build time rather than reading a
+ * --radius-md token. Setting the token therefore does nothing, which is why a
+ * BB button measured 8px against ChatGPT's 10px.
+ *
+ * Measured ladder on both running apps:
+ *     rounded-sm   BB 6px    ChatGPT 7.5px
+ *     rounded      BB 4px    ChatGPT 4px
+ *     rounded-md   BB 8px    ChatGPT 10px
+ *     rounded-lg   BB 10px   ChatGPT 12.5px
+ *     rounded-xl   BB 14px   ChatGPT 15px
+ *     rounded-2xl  BB none   ChatGPT 20px
+ *     rounded-3xl  BB none   ChatGPT 25px
+ * The classes are overridden directly, scoped to BB's shell and its portaled
+ * overlays so plugin-owned UI is untouched. */
+.bb-app-shell .rounded-sm,
+[data-bb-portaled-overlay] .rounded-sm {
+  border-radius: 0.46875rem !important; /* 7.5px */
+}
+
+.bb-app-shell .rounded-md,
+[data-bb-portaled-overlay] .rounded-md {
+  border-radius: 0.625rem !important; /* 10px */
+}
+
+.bb-app-shell .rounded-lg,
+[data-bb-portaled-overlay] .rounded-lg {
+  border-radius: 0.78125rem !important; /* 12.5px */
+}
+
+.bb-app-shell .rounded-xl,
+[data-bb-portaled-overlay] .rounded-xl {
+  border-radius: 0.9375rem !important; /* 15px */
+}
+
+.bb-app-shell .rounded-2xl,
+[data-bb-portaled-overlay] .rounded-2xl {
+  border-radius: 1.25rem !important; /* 20px */
+}
+
+.bb-app-shell .rounded-3xl,
+[data-bb-portaled-overlay] .rounded-3xl {
+  border-radius: 1.5625rem !important; /* 25px */
+}
+
+/* ---- Corner shape (superellipse) --------------------------------------
+ * This is the property that keeps ChatGPT's corners from looking "square":
+ * a superellipse exponent of 1.5 makes the curve leave the edge more
+ * gradually than a circular arc. ChatGPT gates the whole thing on browser
+ * support and falls back to plain `round` corners:
+ *
+ *   @supports (corner-shape: superellipse(1.5)) {
+ *     :root { --codex-corner-radius-scale: 1.25;
+ *             --codex-corner-shape: superellipse(1.5); }
+ *     .rounded-md, .rounded-lg, .rounded-xl, .rounded-2xl, … {
+ *       corner-shape: var(--codex-corner-shape); }
+ *   }
+ *   :root[data-codex-window-type="browser"] { --codex-corner-shape: round; }
+ *
+ * corner-shape is NOT an inherited property: it computes to
+ * `superellipse(1)` (an ordinary circular corner) on every element unless that
+ * element is named. Verified on the live renderer — setting it on :root left a
+ * bare child at superellipse(1). That is exactly why ChatGPT attaches it to the
+ * radius utility classes instead of to the root. BB has no such utility, so the
+ * equivalent is the universal selector, marked important so it also wins over
+ * any per-component radius rule BB may add later.
+ *
+ * Note: `corner-shape` is Chrome 139+ / Safari 18.4+. On older engines this
+ * whole block is inert and the theme simply has circular corners. */
+@supports (corner-shape: superellipse(1.5)) {
+  :root {
+    --chatgpt-corner-shape: superellipse(1.5);
+  }
+
+  .bb-app-shell,
+  .bb-app-shell *,
+  .bb-app-shell *::before,
+  .bb-app-shell *::after,
+  [data-radix-menu-content],
+  [data-radix-menu-content]::before,
+  [data-radix-menu-content]::after,
+  [data-radix-popper-content-wrapper] > [role=listbox],
+  [data-radix-popper-content-wrapper] > [role=dialog],
+  [data-radix-select-content],
+  [data-radix-dropdown-menu-content],
+  [data-radix-popover-content],
+  [data-radix-dialog-content] {
+    corner-shape: var(--chatgpt-corner-shape, superellipse(1.5)) !important;
+  }
+}
+
+/* ===================================================================== */
+/* 2. Light mode                                                          */
+/*                                                                        */
+/* ChatGPT's .electron-light block (see tools/light-tokens.mjs):           */
+/*   surface  var(--gray-0)   = #ffffff                                   */
+/*   ink      #1a1c1f                                                     */
+/*   accent   var(--blue-300)                                             */
+/* ===================================================================== */
+
+:root,
+.light {
+  --canvas: #ffffff;
+  --ink: #1a1c1f;
+
+  --primary: #339cff;
+  --primary-foreground: #ffffff;
+
+  /* ---- Floating surfaces -------------------------------------------
+   * BB sets --popover to the canvas, so a menu would sit flush with the page
+   * and read as "not elevated". ChatGPT lifts floating content onto its own
+   * surface instead (--color-background-elevated-primary = white at 70% in
+   * light, and its opaque twin is plain white). --popover carries the opaque
+   * value so consumers without a blur still get a real surface. */
+  --popover: #ffffff;
+  --chatgpt-elevated: color-mix(in oklab, #ffffff 70%, transparent);
+  --chatgpt-elevated-ring: color-mix(in oklab, #1a1c1f 8%, transparent);
+  --chatgpt-elevated-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.12);
+
+  /* ChatGPT states its text tiers rather than deriving them:
+   *   --color-text-secondary = ink at 65%
+   *   --color-text-tertiary  = ink at 49.8%
+   * The color-mix recipe keeps that contrast true if the anchors are tuned. */
+  --muted-foreground: color-mix(in oklch, var(--ink) 65%, var(--canvas));
+  --subtle-foreground: color-mix(in oklch, var(--ink) 50%, var(--canvas));
+  --readback-foreground: color-mix(in oklch, var(--ink) 58%, var(--canvas));
+
+  /* ---- Status colours ----------------------------------------------
+   * ChatGPT keeps two ramps that must not be mixed: a decorative
+   * accent/chart ramp (blue #339cff, green #40c977, orange #fb6a22, red
+   * #ff6764, yellow #ffd240, purple #ad7bf9) and a separate semantic one.
+   * These are the semantic values, taken from the *text/icon* tokens rather
+   * than the chart ramp:
+   *     --color-text-danger  #ff6764      --color-text-success  #40c977
+   *     --color-text-warning #ff8549      --color-text-caution  #ffd240
+   * Note warning is #ff8549, not the orange #fb6a22: in ChatGPT #fb6a22
+   * fills a warning surface while #ff8549 is the colour that has to be
+   * legible on the canvas, which is what a text-or-icon token needs to be. */
+  --destructive: #ff6764;
+  /* ChatGPT defines no light variant of --color-text-danger, so this is the
+   * next step down its own red ramp (--red-600) — a value from the app's
+   * palette rather than an invented one. */
+  --destructive-text: #ba2623;
+  --success: #40c977;
+  --warning: #ff8549;
+  --attention: #ffd240;
+
+  /* Diff colours: full-strength decoration tokens (the translucent
+   * --color-editor-* pair is for line backgrounds, which is a different
+   * surface from bb's --diff-* line colour). */
+  --diff-added: #40c977;
+  --diff-removed: #fa423e;
+
+  /* bb-only, with no ChatGPT counterpart: ChatGPT has no pull-request or
+   * file-path tint of its own. These take the closest ChatGPT accent so the
+   * theme stays internally consistent, and are marked as extensions rather
+   * than reproductions.
+   *   --pr-merged   <- ChatGPT accent purple #ad7bf9
+   *   --file-accent <- ChatGPT accent blue   #339cff */
+  --pr-merged: #ad7bf9;
+  --file-accent: #339cff;
+
+  /* ChatGPT runs a four-step ground ramp rather than one surface:
+   * dark  #141414 chrome · #181818 editor · #1e1e1e wells · #262626 raised
+   * light --gray-50 / --gray-100 are the equivalent next two steps. */
+  --surface-recessed: #f9f9f9;
+  --surface-raised: color-mix(in oklch, var(--ink) 4%, var(--canvas));
+
+  /* Hover/pressed overlays. Measured on ghost buttons, toolbar buttons and
+   * sidebar rows: dark hover -> white 7.8%, active -> white 12%. On light
+   * ChatGPT states them as ink mixes, which is what these mirror. */
+  --state-hover: color-mix(in oklab, var(--ink) 8%, transparent);
+  --state-active: color-mix(in oklab, var(--ink) 12%, transparent);
+
+  /* ---- Control and card surfaces -----------------------------------
+   * ChatGPT paints an editable control on --color-background-control and a
+   * settings card on its elevated surface, and states its edges with
+   * --color-border (8.4% ink) rather than a heavy stroke. BB instead runs
+   * `bg-transparent border-input` on fields and a 19.4%-white border on cards,
+   * which is why a BB field reads as "same colour as the page, plus a border".
+   * These are the light-mode twins of the measured dark values. */
+  --card: color-mix(in oklab, var(--ink) 4.8%, var(--canvas));
+  --border: color-mix(in oklab, var(--ink) 10%, transparent);
+  --input: color-mix(in oklab, var(--ink) 10%, transparent);
+  --chatgpt-control: color-mix(in oklab, var(--ink) 8%, var(--canvas));
+  --chatgpt-composer: color-mix(in oklab, var(--ink) 5%, var(--canvas));
+  --chatgpt-track-off: color-mix(in oklab, var(--ink) 10%, transparent);
+  --chatgpt-button-secondary: color-mix(in oklab, var(--ink) 5.2%, transparent);
+  --chatgpt-select: color-mix(in oklab, var(--ink) 8%, var(--canvas));
+}
+
+/* ===================================================================== */
+/* 3. Dark mode — the palette the app was measured in                     */
+/* ===================================================================== */
+
+.dark {
+  /* ChatGPT's anchors, verbatim: --codex-base-surface / --codex-base-ink. */
+  --canvas: #181818;
+  --ink: #ffffff;
+
+  --primary: #339cff;
+  --primary-foreground: #0d0d0d;
+
+  /* ---- Floating surfaces -------------------------------------------
+   * Measured on the running app: the menu surface is
+   * --color-surface-elevated-secondary (rgb(45,45,45)) at 90% with an 8px
+   * backdrop blur, not the canvas colour. The opaque twin #2d2d2d is what a
+   * consumer without a blur should paint. */
+  --popover: #2d2d2d;
+  --chatgpt-elevated: color-mix(in oklab, #2d2d2d 90%, transparent);
+  --chatgpt-elevated-ring: color-mix(in oklab, #ffffff 8.2%, transparent);
+  --chatgpt-elevated-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.12);
+
+  --muted-foreground: color-mix(in oklch, var(--ink) 65%, var(--canvas));
+  --subtle-foreground: color-mix(in oklch, var(--ink) 50%, var(--canvas));
+  --readback-foreground: color-mix(in oklch, var(--ink) 58%, var(--canvas));
+
+  /* Same mapping as light; dark keeps ChatGPT's values because the app was
+   * measured in dark. --destructive-text is lifted for legibility on the
+   * dark canvas (same role as ChatGPT's --color-text-danger-soft). */
+  --destructive: #ff6764;
+  --destructive-text: #ff8a88;
+  --success: #40c977;
+  --warning: #ff8549;
+  --attention: #ffd240;
+  --diff-added: #40c977;
+  --diff-removed: #fa423e;
+  --pr-merged: #ad7bf9;
+  --file-accent: #339cff;
+
+  --surface-recessed: #141414;
+  --surface-raised: #262626;
+
+  /* ---- Control and card surfaces -----------------------------------
+   * Measured on the ChatGPT settings page: the group card paints #232323
+   * (white 4.8% over the #181818 canvas) behind a 1px #353535 edge, which is
+   * exactly --color-border at 8.4% white; the selects inside it paint #2a2a2a
+   * with no visible edge. --color-background-control (rgba(45,45,45,.96)) is
+   * ChatGPT's own input background token (--vscode-input-background), and
+   * --color-token-input-border resolves to `var(--vscode-input-border,
+   * transparent)`, which the app never sets outside its extension build — so a
+   * control genuinely has no border. */
+  --card: #232323;
+  --border: rgba(255, 255, 255, 0.084);
+  --input: rgba(255, 255, 255, 0.084);
+  --chatgpt-control: rgba(45, 45, 45, 0.96);
+  --chatgpt-composer: color-mix(in oklab, #2d2d2d 86.5%, transparent);
+  --chatgpt-track-off: rgba(255, 255, 255, 0.1);
+  /* --color-background-button-secondary, measured on the settings "Change" and
+   * "View" buttons: a #2e2e2e fill on the #232323 card = white 5.2%, no edge. */
+  --chatgpt-button-secondary: rgba(255, 255, 255, 0.052);
+  /* Settings dropdown fill: measured #2a2a2a inside the #232323 card, i.e. a
+   * step lighter than the card and still without a stroke. */
+  --chatgpt-select: #2a2a2a;
+
+  /* Measured alphas, not derived ramp steps. */
+  --state-hover: rgba(255, 255, 255, 0.078);
+  --state-active: rgba(255, 255, 255, 0.12);
+}
+
+/* ===================================================================== */
+/* 4. Focus ring — one colour in both modes                               */
+/*                                                                        */
+/* Every focusable measured in the app uses the same value for both the    */
+/* ring and the outline: rgba(131,195,255,0.76). That is ChatGPT's         */
+/* --color-border-focus, and it is also what backs --color-token-focus-    */
+/* border, so it is a single source of truth rather than a per-component   */
+/* choice. BB derives --ring from --primary, which is the saturated        */
+/* #339cff; the softer tint is set explicitly here.                        */
+/* ===================================================================== */
+
+:root,
+.light,
+.dark {
+  --ring: rgba(131, 195, 255, 0.76);
+}
+
+/* ===================================================================== */
+/* 5. Details BB's token set cannot express                               */
+/*                                                                        */
+/* Each block below exists because a measurement did not fit through a     */
+/* token. They are deliberately narrow: they change one property on the    */
+/* element the measurement names, and nothing else.                        */
+/* ===================================================================== */
+
+/* ---- Floating surfaces (menu, dialog, popover) ------------------------
+ * overlays.json measured the menu surface as:
+ *   radius      20px              (ChatGPT .rounded-2xl = 1rem * 1.25)
+ *   background  surface-elevated-secondary at 90% + backdrop-blur 8px
+ *   shadow      0.5px ring + 0 8px 16px -4px rgba(0,0,0,.12)
+ *   border      none — the ring carries the edge
+ * BB has a single --radius (now 10px) and one popover surface, so the floating
+ * layer would need its own radius and frosted treatment.
+ *
+ * Live verification opened BB's actual Permission mode menu through the UI.
+ * The mounted element is role=menu inside a data-radix-popper-content-wrapper,
+ * with data-radix-menu-content; these are real BB hooks, not bundle guesses.
+ * The data-radix hook is the scope boundary because the menu is portaled outside
+ * .bb-app-shell; it also avoids generic role=dialog/role=tooltip plugin panels. */
+
+[data-radix-popper-content-wrapper] > [role=menu],
+[role=menu][data-radix-menu-content] {
+  border: 0 !important;
+  border-radius: 1.25rem !important;
+  background-color: var(--chatgpt-elevated) !important;
+  box-shadow: 0 0 0 0.5px var(--chatgpt-elevated-ring),
+    var(--chatgpt-elevated-shadow) !important;
+  backdrop-filter: blur(8px);
+  /* ChatGPT's menu container is `p-1` — 4px on every side — so an item never
+   * touches the menu edge. A BB menu is p-1 too, but a plugin-authored menu can
+   * be `py-1` (vertical only), which is the case that made one thread menu's
+   * rows run edge to edge while every other menu looked right. Pinning the
+   * container padding makes both land on the measured value. */
+  padding: 0.25rem !important;
+}
+
+[data-radix-menu-content] [role=menuitem][data-highlighted],
+[data-radix-menu-content] [role=menuitem][data-state=on],
+[data-radix-menu-content] [role=menuitem]:hover {
+  background-color: var(--state-hover) !important;
+  color: var(--ink) !important;
+}
+
+[data-radix-popper-content-wrapper] > [role=listbox],
+[data-radix-popper-content-wrapper] > [role=dialog],
+[data-radix-select-content],
+[data-radix-dropdown-menu-content],
+[data-radix-popover-content],
+[data-radix-dialog-content],
+[data-bb-portaled-overlay]:is(
+  [role=menu],
+  [role=listbox],
+  [role=dialog],
+  [data-radix-menu-content],
+  [data-radix-select-content],
+  [data-radix-dropdown-menu-content],
+  [data-radix-popover-content],
+  [data-radix-dialog-content]
+) {
+  border: 0 !important;
+  border-radius: 1.25rem !important;
+  background-color: var(--chatgpt-elevated) !important;
+  box-shadow: 0 0 0 0.5px var(--chatgpt-elevated-ring),
+    var(--chatgpt-elevated-shadow) !important;
+  backdrop-filter: blur(8px);
+}
+
+[data-radix-menu-content] [role=menuitem],
+[data-radix-popper-content-wrapper] [role=option],
+[data-radix-popper-content-wrapper] [role=menuitem],
+[data-bb-portaled-overlay] [role=option],
+[data-bb-portaled-overlay] [role=menuitem],
+[data-bb-portaled-overlay] [role=radio] {
+  border-radius: 0.9375rem !important;
+}
+
+/* ---- Sidebar row hover card -------------------------------------------
+ * Hovering a thread row opens a branch/thread summary card. It is authored by
+ * the nested-sidebar plugin rather than BB itself, so it never matched the
+ * `[role=...]` overlay rules above — but it does carry the plugin scope
+ * attribute, which is the seam to align it through. Semantically it is
+ * ChatGPT's *rich* hover card, not its compact text tip:
+ *   bg surface-elevated-secondary/90 (rgb(45,45,45) at 90%), rounded-xl (15px),
+ *   0.5px ring, blur(8px)
+ * (see ../research/chatgpt-skin/collector/out/tooltips.json — the "rich card
+ * tip" family). The class pair pins it to this one surface. */
+[data-bb-portaled-overlay].w-72.rounded-lg {
+  border: 0 !important;
+  border-radius: 0.9375rem !important; /* 15px */
+  background-color: var(--chatgpt-elevated) !important;
+  box-shadow: 0 0 0 0.5px var(--chatgpt-elevated-ring),
+    var(--chatgpt-elevated-shadow) !important;
+  backdrop-filter: blur(8px);
+}
+
+[data-radix-popper-content-wrapper] [role=option][aria-selected=true],
+[data-radix-popper-content-wrapper] [role=option][data-highlighted],
+[data-radix-popper-content-wrapper] [role=option]:hover,
+[data-radix-popper-content-wrapper] [role=menuitem][data-highlighted],
+[data-radix-popper-content-wrapper] [role=menuitem]:hover,
+[data-bb-portaled-overlay] [role=option][aria-selected=true],
+[data-bb-portaled-overlay] [role=option][data-highlighted],
+[data-bb-portaled-overlay] [role=option]:hover,
+[data-bb-portaled-overlay] [role=menuitem][data-highlighted],
+[data-bb-portaled-overlay] [role=menuitem]:hover,
+[data-bb-portaled-overlay] [role=radio][data-state=on],
+[data-bb-portaled-overlay] [role=radio][aria-checked=true] {
+  background-color: var(--state-hover) !important;
+  color: var(--ink) !important;
+}
+
+.bb-app-shell [aria-label*="Provider, model and reasoning"] {
+  height: 1.75rem !important;
+  min-height: 1.75rem !important;
+  border-radius: 9999px !important;
+  padding: 0 0.5rem !important;
+  background-color: transparent !important;
+  color: var(--ink) !important;
+}
+
+.bb-app-shell [aria-label*="Provider, model and reasoning"]:hover,
+.bb-app-shell [aria-label*="Provider, model and reasoning"][data-state=open] {
+  background-color: var(--state-hover) !important;
+}
+
+.bb-app-shell [data-promptbox-submit-action] {
+  width: 1.75rem !important;
+  height: 1.75rem !important;
+  min-width: 1.75rem !important;
+  min-height: 1.75rem !important;
+  padding: 0 !important;
+  border-radius: 9999px !important;
+  background-color: var(--ink) !important;
+  color: var(--canvas) !important;
+}
+
+.bb-app-shell [data-promptbox-submit-action]:hover {
+  background-color: color-mix(in oklab, var(--ink) 86%, var(--canvas)) !important;
+}
+
+.bb-app-shell [data-promptbox-submit-action]:active {
+  background-color: color-mix(in oklab, var(--ink) 94%, var(--canvas)) !important;
+}
+
+.bb-app-shell [data-promptbox-submit-action] svg {
+  width: 1rem !important;
+  height: 1rem !important;
+}
+
+.bb-app-shell [aria-label="Prompt actions"],
+.bb-app-shell [aria-label="Start voice input"] {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 9999px !important;
+  transition: background-color 150ms ease-out, color 150ms ease-out;
+}
+
+/* BB's shared switch is the same 32×20 track / 16px thumb measured in
+ * ChatGPT settings. Keep the host's state machine and only tune the paint. */
+.bb-app-shell [role=switch] {
+  width: 2rem !important;
+  height: 1.25rem !important;
+  border-radius: 9999px !important;
+  background-color: var(--muted) !important;
+}
+
+.bb-app-shell [role=switch][data-state=checked] {
+  background-color: var(--primary) !important;
+}
+
+.bb-app-shell [role=switch] > span {
+  width: 1rem !important;
+  height: 1rem !important;
+  border-radius: 9999px !important;
+  /* ChatGPT's thumb is --gray-0 (#fff) in BOTH modes: measured on the settings
+   * switches as rgb(255,255,255) with a 1px white border. Painting it with the
+   * canvas colour made it a dark dot on the blue track in dark mode. */
+  background-color: #ffffff !important;
+  border: 1px solid #ffffff !important;
+}
+
+/* ChatGPT's thumb rests 2px from the edge and travels to 14px when checked
+ * (measured on the settings switches: 32x20 track, 16x16 thumb).
+ *
+ * BB compiles Tailwind v4, where `translate-x-3` sets the independent
+ * `translate` property rather than `transform`. Writing `transform` here left
+ * BOTH in force — 12px from BB plus 14px from the theme — so the thumb flew
+ * 26px across a 32px track and hung off the end. The offset is therefore
+ * expressed on the same property BB animates, and `transform` is cleared so an
+ * inherited transform can never stack on top of it. */
+.bb-app-shell [role=switch] > span {
+  transform: none !important;
+}
+
+.bb-app-shell [role=switch][data-state=unchecked] > span {
+  translate: 0.125rem 0 !important;
+}
+
+.bb-app-shell [role=switch][data-state=checked] > span {
+  translate: 0.875rem 0 !important;
+}
+
+/* ChatGPT's off-track is white at 10%, not BB's 16% muted step. */
+.bb-app-shell [role=switch][data-state=unchecked] {
+  background-color: var(--chatgpt-track-off) !important;
+}
+
+/* Prompt-stack cards are semantic composer surfaces rather than Radix
+ * overlays. Align them with the same frosted ChatGPT surface so Plan, Goal,
+ * Workflow, To-do and background-activity cards do not remain opaque BB gray. */
+.bb-app-shell [aria-label="Goal"],
+.bb-app-shell [aria-label="Prompt mode"],
+.bb-app-shell [aria-label="Workflow"],
+.bb-app-shell [aria-label="To-do list"],
+.bb-app-shell [aria-label="Background activity"],
+.bb-app-shell [aria-label="Background activities"],
+.bb-app-shell [aria-label="Background commands"],
+.bb-app-shell [aria-label="Background agents"] {
+  background-color: var(--chatgpt-elevated) !important;
+  border-color: var(--chatgpt-elevated-ring) !important;
+  box-shadow: 0 0 0 0.5px var(--chatgpt-elevated-ring),
+    var(--chatgpt-elevated-shadow) !important;
+  backdrop-filter: blur(8px);
+}
+
+/* ---- Tooltip ----------------------------------------------------------
+ * Two families were measured. The compact text tip is
+ * --color-surface-elevated-secondary (rgb(45,45,45)) at rounded-2xl (20px)
+ * with a 1px hairline border; the rich card tip is the same surface at 90%
+ * with rounded-xl (15px), a 0.5px ring and a blur. BB renders tooltips
+ * through role=tooltip with bg-popover, so both families are expressed by
+ * giving the popover surface its elevated value (above) and pinning the
+ * radius and edge here. */
+.bb-app-shell [role=tooltip],
+[data-bb-portaled-overlay][role=tooltip] {
+  border-radius: 1.25rem !important;
+  border: 1px solid var(--chatgpt-elevated-ring) !important;
+  background-color: var(--popover) !important;
+  color: var(--popover-foreground) !important;
+  box-shadow: none;
+}
+
+.bb-app-shell .bb-sidebar-hover-actions-inset {
+  padding-right: calc(var(--spacing) * 7.5) !important;
+  transition-property: none !important;
+}
+
+/* ---- Editable controls (input, textarea, select) ----------------------
+ * ChatGPT's field has no stroke. It paints --color-background-control
+ * (rgba(45,45,45,.96), the app's own --vscode-input-background) and states its
+ * edge with --color-token-input-border, which resolves to
+ * `var(--vscode-input-border, transparent)` — never set outside the extension
+ * build, so the edge is transparent. BB instead runs `bg-transparent
+ * border-input`, which is what makes a BB field read as "the page colour with a
+ * box drawn on it". Measured on the settings page: the select inside a group
+ * card paints #2a2a2a against the card's #232323, i.e. the control fill over the
+ * card, with no visible stroke. */
+.bb-app-shell input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),
+.bb-app-shell textarea,
+.bb-app-shell [data-radix-select-trigger],
+.bb-app-shell [role=combobox] {
+  background-color: var(--chatgpt-control) !important;
+  border-color: transparent !important;
+}
+
+.bb-app-shell input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):focus-visible,
+.bb-app-shell textarea:focus-visible {
+  border-color: transparent !important;
+  box-shadow: 0 0 0 1px var(--ring) !important;
+}
+
+/* The settings-row dropdown is a Button variant (`border-border/60 bg-card`),
+ * not a Radix Select trigger, so it needs its own value: measured #2a2a2a on the
+ * #232323 card with no stroke. */
+.bb-app-shell button.bg-card {
+  background-color: var(--chatgpt-select) !important;
+  border-color: transparent !important;
+}
+
+/* ---- Settings cards ---------------------------------------------------
+ * ChatGPT's group card is a fill, not an outline: #232323 on the #181818
+ * canvas (white 4.8%) with a 1px #353535 edge (white 8.4%) and a 12.5px corner.
+ * --card and --border now carry those values, so `bg-card border-border` lands
+ * on the measured surface. This rule only fixes the corner, because BB draws
+ * cards at rounded-lg and the theme's ladder maps that to 12.5px already. */
+.bb-app-shell .bg-card {
+  border-color: var(--border) !important;
+}
+
+/* ---- Secondary buttons ------------------------------------------------
+ * ChatGPT's secondary button ("Change", "View", "Install") is a fill, not an
+ * outline: rgba(255,255,255,.052) — its --color-background-button-secondary —
+ * with no stroke, going to .078 on hover. BB's `outline` variant is
+ * `border border-input bg-transparent`, which is the boxed look the screenshots
+ * show. Only the outline variant is retargeted; `default` stays the inverted
+ * foreground fill, which already matches ChatGPT's primary button. */
+.bb-app-shell button.border-input.bg-transparent {
+  background-color: var(--chatgpt-button-secondary) !important;
+  border-color: transparent !important;
+}
+
+.bb-app-shell button.border-input.bg-transparent:hover {
+  background-color: color-mix(in oklab, var(--ink) 7.8%, transparent) !important;
+}
+
+/* ---- Composer (the prompt box) ----------------------------------------
+ * ChatGPT's composer is a single frosted card: no stroke, a 25px corner, an
+ * inset 1px hairline of white 20%, and an 86.5% surface behind a 16px blur.
+ * BB builds the same object out of `rounded-xl border border-border
+ * bg-background shadow-lift`, so it reads as the canvas colour inside a box. */
+.bb-app-shell form.group\/promptbox {
+  border-color: transparent !important;
+  border-radius: 1.5625rem !important; /* 25px */
+  background-color: var(--chatgpt-composer) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--ink) 20%, transparent) !important;
+  backdrop-filter: blur(16px);
+}
+
+/* ChatGPT's composer footer controls are all pills: 28px tall, fully rounded,
+ * transparent until hover, then the standard 7.8% ghost wash. BB renders the
+ * permission and project chips as 24/32px rounded rectangles instead. */
+.bb-app-shell [aria-label="Permission mode"],
+.bb-app-shell [aria-label^="Project: "],
+.bb-app-shell [aria-label="Prompt actions"],
+.bb-app-shell [aria-label="Start voice input"] {
+  height: 1.75rem !important;
+  min-height: 1.75rem !important;
+  border-radius: 9999px !important;
+  border: 0 !important;
+  padding: 0 0.5rem !important;
+  background-color: transparent !important;
+  transition-property: background-color, color !important;
+}
+
+.bb-app-shell [aria-label="Permission mode"]:hover,
+.bb-app-shell [aria-label^="Project: "]:hover,
+.bb-app-shell [aria-label="Permission mode"][data-state=open],
+.bb-app-shell [aria-label^="Project: "][data-state=open],
+.bb-app-shell [aria-label="Prompt actions"]:hover,
+.bb-app-shell [aria-label="Start voice input"]:hover {
+  background-color: var(--state-hover) !important;
+}
+
+/* ---- Overlay section labels -------------------------------------------
+ * BB pins the "Model" / "Reasoning" group heading with `sticky top-0
+ * bg-background`, so the label paints the canvas colour (#181818) on top of the
+ * menu's elevated surface (#2d2d2d) and reads as a black bar. ChatGPT's menu
+ * has no such plate: the heading is just muted text on the menu surface. */
+[data-radix-popper-content-wrapper] .bg-background,
+[data-bb-portaled-overlay] .bg-background,
+[data-radix-menu-content] .bg-background,
+[data-radix-select-content] .bg-background,
+[data-radix-dropdown-menu-content] .bg-background,
+[data-radix-popover-content] .bg-background {
+  background-color: transparent !important;
+}
+
+/* ---- Command palette / slash menu -------------------------------------
+ * BB renders the composer's slash menu and the ⌘K palette from the cmdk
+ * primitives: an outlined rounded-md box whose rows are `rounded` (4px).
+ * ChatGPT's equivalent is the same elevated surface as every other menu, so the
+ * container takes the frosted 20px treatment and its rows the 15px step. */
+[data-radix-popper-content-wrapper] [cmdk-root],
+[data-bb-portaled-overlay] [cmdk-root],
+.bb-app-shell [cmdk-root] {
+  border: 0 !important;
+  border-radius: 1.25rem !important;
+  background-color: var(--chatgpt-elevated) !important;
+  box-shadow: 0 0 0 0.5px var(--chatgpt-elevated-ring),
+    var(--chatgpt-elevated-shadow) !important;
+  backdrop-filter: blur(8px);
+}
+
+[cmdk-root] [cmdk-item],
+[cmdk-root] [cmdk-group-heading] {
+  border-radius: 0.9375rem !important; /* 15px, ChatGPT's menu-item step */
+}
+
+[cmdk-root] [cmdk-item][data-selected=true] {
+  background-color: var(--state-hover) !important;
+  color: var(--ink) !important;
+}
+
+/* The composer's slash/mention menu is BB's own MentionMenu, not cmdk: it is an
+ * `overflow-hidden rounded-md border border-border bg-popover` box whose rows are
+ * `rounded px-2 py-1.5` (4px). ChatGPT draws this as the same elevated menu as
+ * every other overlay. The class triple is the component's own signature. */
+.bb-app-shell .overflow-hidden.rounded-md.border.border-border.bg-popover {
+  border: 0 !important;
+  border-radius: 1.25rem !important;
+  background-color: var(--chatgpt-elevated) !important;
+  box-shadow: 0 0 0 0.5px var(--chatgpt-elevated-ring),
+    var(--chatgpt-elevated-shadow) !important;
+  backdrop-filter: blur(8px);
+}
+
+.bb-app-shell .overflow-hidden.rounded-md.border.border-border.bg-popover button {
+  border-radius: 0.9375rem !important; /* 15px, ChatGPT's menu-item step */
+}
+
+/* ---- Checkbox ---------------------------------------------------------
+ * controls-settings.json captured ChatGPT's 13 switches. BB's live app has no
+ * switch mounted on the default route, but its shipped CSS exposes a real
+ * Radix checkbox hook (role=checkbox + data-state=checked). This selector is
+ * intentionally scoped to BB's shell and only changes the checked state;
+ * plugin-owned native switches are not touched. */
+.bb-app-shell [role="checkbox"][data-state="checked"] {
+  background-color: #339cff;
+  border-color: #339cff;
+  color: #ffffff;
+}
+
+/* ---- Tooltip ----------------------------------------------------------
+ * tooltips.json found two families (compact text tip bg rgb(45,45,45) r 20px;
+ * rich card tip bg surface-elevated 96% r 15px). BB's current [role=tooltip]
+ * nodes are plugin-owned tooltip panels, so no role-wide override is shipped.
+ * This avoids changing unrelated plugin UI until BB exposes a shared tooltip
+ * registration hook. */

@@ -1,0 +1,102 @@
+{
+  "name": "ChatGPT Code Light",
+  "type": "light",
+  "colors": {
+    "editor.background": "#ffffff",
+    "editor.foreground": "#1a1c1f"
+  },
+  "tokenColors": [
+    {
+      "fg": "#5c5c5c",
+      "scope": [
+        "comment",
+        "punctuation.definition.comment",
+        "comment.block.documentation",
+        "comment.line.double-slash",
+        "meta.diff.header.from-file",
+        "meta.diff.header.to-file"
+      ]
+    },
+    {
+      "fg": "#ab4f7a",
+      "scope": [
+        "keyword",
+        "keyword.control",
+        "storage",
+        "storage.type",
+        "storage.modifier",
+        "variable.language",
+        "keyword.other.unit",
+        "entity.name.tag"
+      ]
+    },
+    {
+      "fg": "#3a843f",
+      "scope": [
+        "string",
+        "string.quoted",
+        "punctuation.definition.string.begin",
+        "punctuation.definition.string.end",
+        "markup.changed.diff",
+        "meta.property-value.css"
+      ]
+    },
+    {
+      "fg": "#1f4e94",
+      "scope": [
+        "entity.name.function",
+        "support.function",
+        "meta.function-call",
+        "entity.name.type",
+        "support.class",
+        "entity.name.class",
+        "meta.function",
+        "entity.name.tag.css",
+        "entity.name.tag.html",
+        "support.type"
+      ]
+    },
+    {
+      "fg": "#643cae",
+      "scope": [
+        "variable",
+        "variable.other",
+        "variable.parameter",
+        "variable.other.readwrite",
+        "variable.other.property",
+        "meta.definition.variable.name",
+        "support.variable"
+      ]
+    },
+    {
+      "fg": "#ac4f23",
+      "scope": [
+        "constant",
+        "constant.numeric",
+        "constant.language",
+        "constant.character",
+        "constant.character.escape",
+        "support.constant",
+        "constant.other.color"
+      ]
+    },
+    {
+      "fg": "#b8802b",
+      "scope": [
+        "entity.other.attribute-name",
+        "entity.other.attribute-name.class.css",
+        "entity.other.attribute-name.id.css",
+        "meta.attribute",
+        "meta.object-literal.key"
+      ]
+    },
+    {
+      "fg": "#ba2623",
+      "scope": [
+        "invalid",
+        "invalid.illegal",
+        "message.error"
+      ]
+    }
+  ]
+}
