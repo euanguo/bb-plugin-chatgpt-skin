@@ -918,11 +918,20 @@
   border-color: transparent !important;
 }
 
-.bb-app-shell input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):focus-visible,
+.bb-app-shell input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([role=combobox]):focus-visible,
 .bb-app-shell textarea:focus-visible {
   border-color: transparent !important;
   box-shadow: 0 0 0 1px var(--ring) !important;
 }
+
+/* Popup search fields do NOT take the focus ring. ChatGPT's own rule is
+ * `[cmdk-input]:focus-visible { outline: none }` — the command palette, the
+ * thread-search dialog and the branch/action picker all live on a frosted
+ * overlay whose container already expresses focus, so an extra ring reads as a
+ * blue box floating inside the panel. Those fields are the Radix comboboxes
+ * (`input[role=combobox]`); ordinary form fields keep the ring above. The
+ * exclusion lives in the base rule's `:not()` chain because that selector
+ * carries four `:not()`s and would otherwise out-rank a separate override. */
 
 /* The settings-row dropdown is a Button variant (`border-border/60 bg-card`),
  * not a Radix Select trigger. It carries a REAL 1px edge, unlike the field
@@ -984,7 +993,14 @@
 .bb-app-shell button[class*="border-border bg-transparent px-2 text-xs font-medium"],
 .bb-app-shell button[class*="border-border/70 bg-transparent"] {
   background-color: transparent !important;
-  border-color: transparent !important;
+  /* These are the SELECTOR chips (the git-branch button, the workspace-open
+   * split halves, the Commit control), not the ghost icon buttons in the same
+   * header row. They ship with a real `border-border/70` edge, and ChatGPT's
+   * label-bearing chips keep a visible box while the pure icon buttons do not.
+   * An earlier version cleared the stroke here, which flattened the branch /
+   * checkout selectors into borderless text. Restore the box with the shared
+   * --border so it tracks the mode. */
+  border-color: var(--border) !important;
 }
 
 .bb-app-shell button[class*="border-border bg-transparent px-2 text-xs font-medium"]:hover,
