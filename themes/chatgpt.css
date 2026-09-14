@@ -281,9 +281,6 @@
   /* The canvas is the recessed step (#f6f6f6); panels and cards are white.
    * BB paints body/--background with --canvas, so this is the app ground. */
   --canvas: #f6f6f6;
-  /* White surface for raised panels, cards and controls, matching ChatGPT's
-   * --color-surface / --color-background-elevated-primary-opaque. */
-  --chatgpt-surface: #ffffff;
   --ink: #1a1c1f;
 
   --primary: #339cff;
@@ -472,6 +469,15 @@
    * rgba(255,255,255,0.08) on ChatGPT's dark sidebar), not BB's heavier 12%
    * ink-over-canvas step. */
   --sidebar-accent: rgba(255, 255, 255, 0.08);
+
+  /* ChatGPT's dark left panel is --gray-750 (#282828) at 70% (measured
+   * `color(srgb 0.156863 … / 0.7)` on its ASIDE) — a step LIGHTER than the
+   * #141414/#181818 ground, the same relationship the light panel has.
+   * BB's own dark value is a 4.3% ink-over-canvas mix, which lands near the
+   * canvas and reads as "no panel". This must be stated in the .dark block:
+   * the light rule sits in `:root, .light`, and `:root` still matches in dark
+   * mode, so leaving it out left the dark sidebar painting the LIGHT value. */
+  --sidebar: color-mix(in oklab, #282828 70%, transparent);
 }
 
 /* ===================================================================== */
