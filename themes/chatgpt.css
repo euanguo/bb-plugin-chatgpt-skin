@@ -388,6 +388,13 @@
    * slightly LIGHTER than the #f6f6f6 canvas. The 2.2% value is replaced so the
    * sidebar and the canvas keep ChatGPT's relationship. */
   --sidebar: color-mix(in oklab, #ffffff 70%, transparent);
+
+  /* BB derives --sidebar-accent as an 8% ink mix over the canvas, which is what
+   * paints a selected/hovered sidebar row. Measured on ChatGPT's light sidebar,
+   * a selected row is `rgba(26,28,31,0.055)` and its hover is the same
+   * (--color-background-primary-ghost-hover = rgba(26,28,31,0.053)) — a lighter
+   * wash than BB's 8%, which is why the selected item read as "too heavy". */
+  --sidebar-accent: color-mix(in oklab, var(--ink) 5.5%, transparent);
 }
 
 /* ===================================================================== */
@@ -460,6 +467,11 @@
   /* Measured alphas, not derived ramp steps. */
   --state-hover: rgba(255, 255, 255, 0.078);
   --state-active: rgba(255, 255, 255, 0.12);
+
+  /* A selected sidebar row is the same wash as hover (measured
+   * rgba(255,255,255,0.08) on ChatGPT's dark sidebar), not BB's heavier 12%
+   * ink-over-canvas step. */
+  --sidebar-accent: rgba(255, 255, 255, 0.08);
 }
 
 /* ===================================================================== */
@@ -907,11 +919,16 @@
 }
 
 /* The settings-row dropdown is a Button variant (`border-border/60 bg-card`),
- * not a Radix Select trigger, so it needs its own value: measured #2a2a2a on the
- * #232323 card with no stroke. */
+ * not a Radix Select trigger. It carries a REAL 1px edge, unlike the field
+ * rule above: measured on ChatGPT's light settings page the "VS Code" / "自动
+ * 检测" dropdowns are a 96%-white fill inside a 1px ink-8% border (dark: white
+ * 3% fill, white 8.2% border) — the same --border the cards use. An earlier
+ * version of this rule cleared the border, which is invisible in dark (select
+ * and card are both near #2a2a2a) but drops the box entirely in light, where
+ * the select and the white card would otherwise merge. */
 .bb-app-shell button.bg-card {
   background-color: var(--chatgpt-select) !important;
-  border-color: transparent !important;
+  border-color: var(--border) !important;
 }
 
 /* ---- Settings cards ---------------------------------------------------
@@ -1026,6 +1043,27 @@
 .bb-app-shell button[class*="h-[28px] w-[28px]"]:not([role]),
 .bb-app-shell button.h-7.w-7:not([role]) {
   border-radius: 0.78125rem !important; /* 12.5px, ChatGPT's rounded-lg */
+}
+
+/* ---- Plugin icon buttons (the nested-sidebar family) -------------------
+ * The nested-sidebar plugin spells out its square icon affordances by hand
+ * (`flex size-5/size-6 items-center justify-center rounded-*`), so a theme
+ * cannot tell them from any other small square button — and the smaller
+ * `size-5`/`size-6` ones kept their stock 4px/10px corners instead of ChatGPT's
+ * 12.5px.
+ *
+ * `IconButton` in that plugin now stamps `data-bb-icon-button`, and its hand-
+ * written sites were migrated onto the same marker. This is the seam: it matches
+ * the family by what it is, independent of aria-label or size. Measured on the
+ * live ChatGPT sidebar, a 20-24px icon affordance is rounded-lg (12.5px) — the
+ * 19x20 pin/archive buttons are 10px because they sit inside a 12.5px row, so
+ * the smaller step is applied to the `size-5` members. */
+.bb-app-shell [data-bb-icon-button] {
+  border-radius: 0.78125rem !important; /* 12.5px */
+}
+
+.bb-app-shell [data-bb-icon-button].size-5 {
+  border-radius: 0.625rem !important; /* 10px, the in-row affordance step */
 }
 
 /* ---- Tab pills and their close affordance -----------------------------
