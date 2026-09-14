@@ -262,28 +262,47 @@
 /* ===================================================================== */
 /* 2. Light mode                                                          */
 /*                                                                        */
-/* ChatGPT's .electron-light block (see tools/light-tokens.mjs):           */
-/*   surface  var(--gray-0)   = #ffffff                                   */
-/*   ink      #1a1c1f                                                     */
-/*   accent   var(--blue-300)                                             */
+/* ChatGPT's .electron-light block, read straight out of its stylesheet    */
+/* (collector/out/css/01-app-initial-*.css):                               */
+/*   surface          var(--gray-0)      = #ffffff  (a raised panel)       */
+/*   surface-secondary  #f6f6f6          (the app canvas)                  */
+/*   ink              #1a1c1f                                              */
+/*   accent           var(--blue-300)                                      */
+/*                                                                         */
+/* The earlier version of this block used a WHITE canvas, because only the  */
+/* surface token had been read. Measured live, ChatGPT's light canvas is    */
+/* #f6f6f6 (--color-surface-secondary = --vscode-sideBar-background) and   */
+/* its panels are #ffffff on top of it — a dark-canvas-with-lighter-panels  */
+/* model that mirrors the dark ramp, not a flat white page.                 */
 /* ===================================================================== */
 
 :root,
 .light {
-  --canvas: #ffffff;
+  /* The canvas is the recessed step (#f6f6f6); panels and cards are white.
+   * BB paints body/--background with --canvas, so this is the app ground. */
+  --canvas: #f6f6f6;
+  /* White surface for raised panels, cards and controls, matching ChatGPT's
+   * --color-surface / --color-background-elevated-primary-opaque. */
+  --chatgpt-surface: #ffffff;
   --ink: #1a1c1f;
 
   --primary: #339cff;
   --primary-foreground: #ffffff;
 
   /* ---- Floating surfaces -------------------------------------------
-   * BB sets --popover to the canvas, so a menu would sit flush with the page
-   * and read as "not elevated". ChatGPT lifts floating content onto its own
-   * surface instead (--color-background-elevated-primary = white at 70% in
-   * light, and its opaque twin is plain white). --popover carries the opaque
-   * value so consumers without a blur still get a real surface. */
+   * ChatGPT's menu is `bg-surface-elevated-secondary/90` + blur, and in light
+   * mode surface-elevated-secondary is PLAIN WHITE (its dark twin is #2d2d2d).
+   * So the light menu is white at 90%, not the 70% the earlier block carried:
+   * 70% white over a #f6f6f6 canvas let the page show through and made the
+   * overlay read as "too transparent" next to ChatGPT. --popover keeps the
+   * opaque twin so a consumer without a blur still gets a real surface. */
   --popover: #ffffff;
-  --chatgpt-elevated: color-mix(in oklab, #ffffff 70%, transparent);
+  --chatgpt-elevated: color-mix(in oklab, #ffffff 90%, transparent);
+  /* The ⌘K / slash palette is a step MORE opaque than a menu: ChatGPT's
+   * `[cmdk-root]` rule is `color-mix(in oklab, surface-elevated-secondary 95%,
+   * transparent)`, and its `.command-menu-dialog` variant is fully opaque. 90%
+   * (the menu value) read as "too transparent" on a long scrolling list. */
+  --chatgpt-cmdk: color-mix(in oklab, #ffffff 95%, transparent);
   --chatgpt-elevated-ring: color-mix(in oklab, #1a1c1f 8%, transparent);
   --chatgpt-elevated-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.12);
 
@@ -330,11 +349,13 @@
   --pr-merged: #ad7bf9;
   --file-accent: #339cff;
 
-  /* ChatGPT runs a four-step ground ramp rather than one surface:
+  /* ChatGPT runs a ground ramp rather than one surface:
    * dark  #141414 chrome · #181818 editor · #1e1e1e wells · #262626 raised
-   * light --gray-50 / --gray-100 are the equivalent next two steps. */
+   * light --gray-50 (#f9f9f9) chrome · white surfaces · --gray-100 (#ededed)
+   * wells. The canvas itself is --color-surface-secondary (#f6f6f6), which is
+   * what --canvas now carries. */
   --surface-recessed: #f9f9f9;
-  --surface-raised: color-mix(in oklch, var(--ink) 4%, var(--canvas));
+  --surface-raised: #ffffff;
 
   /* Hover/pressed overlays. Measured on ghost buttons, toolbar buttons and
    * sidebar rows: dark hover -> white 7.8%, active -> white 12%. On light
@@ -343,20 +364,30 @@
   --state-active: color-mix(in oklab, var(--ink) 12%, transparent);
 
   /* ---- Control and card surfaces -----------------------------------
-   * ChatGPT paints an editable control on --color-background-control and a
-   * settings card on its elevated surface, and states its edges with
-   * --color-border (8.4% ink) rather than a heavy stroke. BB instead runs
-   * `bg-transparent border-input` on fields and a 19.4%-white border on cards,
-   * which is why a BB field reads as "same colour as the page, plus a border".
-   * These are the light-mode twins of the measured dark values. */
-  --card: color-mix(in oklab, var(--ink) 4.8%, var(--canvas));
-  --border: color-mix(in oklab, var(--ink) 10%, transparent);
-  --input: color-mix(in oklab, var(--ink) 10%, transparent);
-  --chatgpt-control: color-mix(in oklab, var(--ink) 8%, var(--canvas));
-  --chatgpt-composer: color-mix(in oklab, var(--ink) 5%, var(--canvas));
+   * ChatGPT states its edges with --color-border, which in light resolves to
+   * color-mix(in oklab, #1a1c1f 8%, transparent) — the same 8% ink the dark
+   * mode uses of white, so one recipe covers both and neither is invented.
+   *
+   * A control/card is a WHITE surface on the #f6f6f6 canvas (ChatGPT's
+   * --color-background-elevated-primary-opaque / --color-surface), not a
+   * darkening of the canvas. Painting the card as an ink mix over a #f6f6f6
+   * canvas produced a grey card on grey, which is the "light mode looks off"
+   * the user reported. */
+  --card: #ffffff;
+  --border: color-mix(in oklab, var(--ink) 8%, transparent);
+  --input: color-mix(in oklab, var(--ink) 8%, transparent);
+  --chatgpt-control: #ffffff;
+  --chatgpt-composer: color-mix(in oklab, #ffffff 86.5%, transparent);
   --chatgpt-track-off: color-mix(in oklab, var(--ink) 10%, transparent);
-  --chatgpt-button-secondary: color-mix(in oklab, var(--ink) 5.2%, transparent);
-  --chatgpt-select: color-mix(in oklab, var(--ink) 8%, var(--canvas));
+  --chatgpt-button-secondary: color-mix(in oklab, var(--ink) 5%, transparent);
+  --chatgpt-select: #ffffff;
+
+  /* BB derives --sidebar as a 2.2% ink darkening of the canvas, so its sidebar
+   * is a step DARKER than the page. ChatGPT's left panel is the opposite: a
+   * white panel at 70% (measured `color(srgb 1 1 1 / 0.7)` on its ASIDE) sitting
+   * slightly LIGHTER than the #f6f6f6 canvas. The 2.2% value is replaced so the
+   * sidebar and the canvas keep ChatGPT's relationship. */
+  --sidebar: color-mix(in oklab, #ffffff 70%, transparent);
 }
 
 /* ===================================================================== */
@@ -378,6 +409,9 @@
    * consumer without a blur should paint. */
   --popover: #2d2d2d;
   --chatgpt-elevated: color-mix(in oklab, #2d2d2d 90%, transparent);
+  /* Command palette: ChatGPT mixes surface-elevated-secondary at 95%, and its
+   * dark twin (#2d2d2d) is what the 90% menu value is built from. */
+  --chatgpt-cmdk: color-mix(in oklab, #2d2d2d 95%, transparent);
   --chatgpt-elevated-ring: color-mix(in oklab, #ffffff 8.2%, transparent);
   --chatgpt-elevated-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.12);
 
@@ -763,10 +797,14 @@
  * is made transparent and the ring dropped, while the hover highlight (which BB
  * applies on the row button, not the group) is left to the shared state rules.
  *
- * The signature is the shared class pair, so this covers every active activity
- * row — Goal, prompt mode, workflow, to-do, background agents — not just Goal. */
-.bb-app-shell .rounded-md.bg-background\/70,
-.bb-app-shell .rounded-md.bg-background\/70.ring-1 {
+ * The signature is `bg-background/70` PLUS the shared `shadow-xs ring-1
+ * ring-border/60` pair, NOT the radius. `activityRowClass("active", …)` is a
+ * `cn()` merge, and every caller that appends `rounded-none` (the Goal card's
+ * header group does) drops the base `rounded-md` — so a rule keyed on the radius
+ * silently stopped matching and the plate stayed opaque. The fill/ring utilities
+ * survive the merge, so they are the durable seam. */
+.bb-app-shell .bg-background\/70.shadow-xs.ring-1,
+.bb-app-shell .bg-background\/70.ring-border\/60 {
   background-color: transparent !important;
   box-shadow: none !important;
 }
@@ -857,8 +895,7 @@
  * card, with no visible stroke. */
 .bb-app-shell input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),
 .bb-app-shell textarea,
-.bb-app-shell [data-radix-select-trigger],
-.bb-app-shell [role=combobox] {
+.bb-app-shell [data-radix-select-trigger] {
   background-color: var(--chatgpt-control) !important;
   border-color: transparent !important;
 }
@@ -933,17 +970,48 @@
 }
 
 /* ---- Composer (the prompt box) ----------------------------------------
- * ChatGPT's composer is a single frosted card: no stroke, a 25px corner, an
- * inset 1px hairline of white 20%, and an 86.5% surface behind a 16px blur.
+ * ChatGPT's composer is a single frosted card: a 25px corner, a translucent
+ * surface behind a blur, and an edge that is expressed ENTIRELY through its
+ * elevation token. Its own stylesheet sets `border: 0 !important` and then
+ * applies:
+ *     light  --elevation-composer:
+ *              0 0 0 1px #0000000a, 0 2px 8px 0 #0000000a, 0 4px 80px 8px #00000006
+ *     dark   --elevation-composer-dark:
+ *              inset 0 0 1px 0 #fff3
+ * i.e. light is an OUTER hairline plus two soft drops, and dark is a single
+ * INSET hairline. The two modes are not the same shape.
+ *
  * BB builds the same object out of `rounded-xl border border-border
- * bg-background shadow-lift`, so it reads as the canvas colour inside a box. */
+ * bg-background shadow-lift`. The earlier version of this rule painted
+ * `inset 0 0 0 1px <ink 20%>` in BOTH modes; in light mode `--ink` is near-black,
+ * so BB rendered a dark 1px ring just inside the border while the element's own
+ * transparent 1px border still occupied the outer pixel — exactly the
+ * "light outer line + dark inner line" the user saw. The border WIDTH must stay
+ * 1px (removing it would change the card's box size), so only its colour is
+ * cleared and the ring is moved onto the correct side per mode.
+ *
+ * Written as two explicit rules rather than one `color-mix` so each mode's
+ * elevation is reproduced verbatim from ChatGPT's token. */
 .bb-app-shell form.group\/promptbox {
   border-color: transparent !important;
   border-radius: 1.5625rem !important; /* 25px */
   background-color: var(--chatgpt-composer) !important;
-  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--ink) 20%, transparent) !important;
   backdrop-filter: blur(16px);
 }
+
+/* Light: outer hairline + two soft drops (--elevation-composer, verbatim).
+ * The dark class is applied to <html> (the `.dark` variable block), not to
+ * `.bb-app-shell`, so dark is scoped as an ancestor rather than a same-element
+ * class. */
+.bb-app-shell form.group\/promptbox {
+  box-shadow: 0 0 0 1px #0000000a, 0 2px 8px 0 #0000000a, 0 4px 80px 8px #00000006 !important;
+}
+
+/* Dark: a single inset hairline (--elevation-composer-dark, verbatim). */
+.dark .bb-app-shell form.group\/promptbox {
+  box-shadow: inset 0 0 1px 0 #fff3 !important;
+}
+
 
 /* ---- Header / toolbar icon buttons ------------------------------------
  * BB renders every header and toolbar icon button through
@@ -1035,13 +1103,19 @@
  * BB pins the "Model" / "Reasoning" group heading with `sticky top-0
  * bg-background`, so the label paints the canvas colour (#181818) on top of the
  * menu's elevated surface (#2d2d2d) and reads as a black bar. ChatGPT's menu
- * has no such plate: the heading is just muted text on the menu surface. */
-[data-radix-popper-content-wrapper] .bg-background,
-[data-bb-portaled-overlay] .bg-background,
-[data-radix-menu-content] .bg-background,
-[data-radix-select-content] .bg-background,
-[data-radix-dropdown-menu-content] .bg-background,
-[data-radix-popover-content] .bg-background {
+ * has no such plate: the heading is just muted text on the menu surface.
+ *
+ * The signature is `sticky top-0` PLUS `bg-background`, not `bg-background`
+ * alone. Matching the bare utility inside a menu container also caught the
+ * Switch thumb, which is itself `bg-background`: every switch rendered inside a
+ * popup (the model picker's Fast mode toggle) then lost its fill and read as an
+ * empty ring. Both real plates are `sticky top-0`, so the pair is the seam. */
+[data-radix-popper-content-wrapper] .sticky.top-0.bg-background,
+[data-bb-portaled-overlay] .sticky.top-0.bg-background,
+[data-radix-menu-content] .sticky.top-0.bg-background,
+[data-radix-select-content] .sticky.top-0.bg-background,
+[data-radix-dropdown-menu-content] .sticky.top-0.bg-background,
+[data-radix-popover-content] .sticky.top-0.bg-background {
   background-color: transparent !important;
 }
 
@@ -1054,14 +1128,16 @@
  * its provider strip is the same elevated surface as the menu.
  *
  * Scoped to the shell, and only to elements that are INSIDE a menu-like
- * container, so a legitimate page-level `bg-background` is untouched. */
-.bb-app-shell .overflow-hidden.rounded-md.border.border-border.bg-popover .bg-background,
+ * container, so a legitimate page-level `bg-background` is untouched. The
+ * `bg-background` half carries the same `sticky top-0` guard as the portaled
+ * rule above, so it cannot catch the switch thumb again. */
+.bb-app-shell .overflow-hidden.rounded-md.border.border-border.bg-popover .sticky.top-0.bg-background,
 .bb-app-shell .overflow-hidden.rounded-md.border.border-border.bg-popover .bg-surface-recessed,
-.bb-app-shell [role=dialog] .bg-background,
+.bb-app-shell [role=dialog] .sticky.top-0.bg-background,
 .bb-app-shell [role=dialog] .bg-surface-recessed,
-.bb-app-shell [role=listbox] .bg-background,
+.bb-app-shell [role=listbox] .sticky.top-0.bg-background,
 .bb-app-shell [role=listbox] .bg-surface-recessed,
-.bb-app-shell [role=menu] .bg-background,
+.bb-app-shell [role=menu] .sticky.top-0.bg-background,
 .bb-app-shell [role=menu] .bg-surface-recessed {
   background-color: transparent !important;
 }
@@ -1076,7 +1152,10 @@
 .bb-app-shell [cmdk-root] {
   border: 0 !important;
   border-radius: 1.25rem !important;
-  background-color: var(--chatgpt-elevated) !important;
+  /* ChatGPT's [cmdk-root] is a 95% surface (its .command-menu-dialog variant is
+   * fully opaque); the 90% menu value was measurably too transparent on a long
+   * scrolling command list. */
+  background-color: var(--chatgpt-cmdk) !important;
   box-shadow: 0 0 0 0.5px var(--chatgpt-elevated-ring),
     var(--chatgpt-elevated-shadow) !important;
   backdrop-filter: blur(8px);
