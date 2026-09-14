@@ -144,7 +144,8 @@
  * `rounded-r-none` and the second `rounded-l-none`, so the pair reads as one
  * control. With the resets overridden, each half grew its own full radius and the
  * seam became two bumps (the "editor icon" control). These rules restore the
- * resets, and must stay AFTER the ladder. */
+ * resets, and must stay AFTER the ladder.
+ *
  * NOTE on specificity: the resets are written with a `button.` variant as well as
  * the bare class. Rules that target a family by attribute (for example
  * `button[class*="border-border bg-transparent"]`, used for the toolbar chips)
