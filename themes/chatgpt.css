@@ -117,6 +117,23 @@
   border-radius: 1.5625rem !important; /* 25px */
 }
 
+/* ---- Toolbar chip radius ----------------------------------------------
+ * BB's toolbar action buttons (the thread header's "Git branch: …" control and
+ * the workspace-open SplitButton halves) are `h-7 rounded-md`, so the ladder
+ * above gives them 10px. ChatGPT draws the same header-row chips at 12.5px
+ * (measured: its "搜索" / "查看活动" / mode chip are 24-32px tall at 12.5-15px).
+ *
+ * This rule sits BEFORE the per-corner resets below on purpose: it writes the
+ * radius as a SHORTHAND, and the SplitButton joins its halves with
+ * `rounded-r-none` / `rounded-l-none`. If this came after the resets it would
+ * re-round the seam and split the control in two — the exact regression the
+ * resets exist to prevent. Ordering keeps both true: chips are 12.5px, and a
+ * split control still reads as one. */
+.bb-app-shell button[class*="border-border bg-transparent px-2 text-xs font-medium"],
+.bb-app-shell button[class*="border-border/70 bg-transparent"] {
+  border-radius: 0.78125rem !important; /* 12.5px */
+}
+
 /* ---- Per-corner resets -------------------------------------------------
  * The ladder above writes `border-radius` as a SHORTHAND with !important, which
  * sets all four corners. Tailwind's per-corner utilities (`rounded-r-none`, and
@@ -128,13 +145,24 @@
  * control. With the resets overridden, each half grew its own full radius and the
  * seam became two bumps (the "editor icon" control). These rules restore the
  * resets, and must stay AFTER the ladder. */
+ * NOTE on specificity: the resets are written with a `button.` variant as well as
+ * the bare class. Rules that target a family by attribute (for example
+ * `button[class*="border-border bg-transparent"]`, used for the toolbar chips)
+ * score (0,2,1) and would otherwise beat a bare `.bb-app-shell .rounded-r-none`
+ * at (0,2,0) — re-rounding the seam even though the reset comes later. The
+ * `button.rounded-*-none` form ties that specificity so document order decides,
+ * which keeps both invariants true at once. */
+.bb-app-shell button.rounded-l-none,
 .bb-app-shell .rounded-l-none,
+[data-bb-portaled-overlay] button.rounded-l-none,
 [data-bb-portaled-overlay] .rounded-l-none {
   border-top-left-radius: 0 !important;
   border-bottom-left-radius: 0 !important;
 }
 
+.bb-app-shell button.rounded-r-none,
 .bb-app-shell .rounded-r-none,
+[data-bb-portaled-overlay] button.rounded-r-none,
 [data-bb-portaled-overlay] .rounded-r-none {
   border-top-right-radius: 0 !important;
   border-bottom-right-radius: 0 !important;
@@ -806,6 +834,16 @@
   transition-property: none !important;
 }
 
+/* ---- Compact `size-7` icon buttons ------------------------------------
+ * A second icon-button box exists alongside `h-[28px] w-[28px]`: BB's shared
+ * Button with `size-7 shrink-0` (28x28, same box, different spelling) — the
+ * thread header's "Re-generate thread name" control is the visible case. It
+ * measured 10px against ChatGPT's 12.5px for the same 28px icon button, because
+ * the header-icon rule keys off the bracket form only. */
+.bb-app-shell button[class*="size-7 shrink-0"] {
+  border-radius: 0.78125rem !important; /* 12.5px, ChatGPT's rounded-lg */
+}
+
 /* ---- Editable controls (input, textarea, select) ----------------------
  * ChatGPT's field has no stroke. It paints --color-background-control
  * (rgba(45,45,45,.96), the app's own --vscode-input-background) and states its
@@ -862,6 +900,35 @@
 
 .bb-app-shell button.border-input.bg-transparent:hover {
   background-color: color-mix(in oklab, var(--ink) 7.8%, transparent) !important;
+}
+
+/* ---- Toolbar action buttons (bordered h-7 chips) ----------------------
+ * BB's `COARSE_POINTER_TOOLBAR_ACTION_BUTTON_CLASS` renders the thread header's
+ * action buttons (`THREAD_HEADER_ACTION_BUTTON_CLASS`, e.g. the "Git branch: …"
+ * control, `data-testid=vcs-branch-button`) and the workspace-open SplitButton
+ * halves as
+ *
+ *     h-7 rounded-md border-border bg-transparent px-2 text-xs font-medium
+ *
+ * i.e. `border-border`, not `border-input` — which is why the outline-variant
+ * rule above missed them and they kept a 1px `border-border/70` stroke.
+ *
+ * Measured on ChatGPT's header: every equivalent control ("搜索", "查看活动",
+ * "隐藏侧边栏", "返回/前进", the mode chip) is FILL-TRANSPARENT with a
+ * transparent edge and only gains the 7.8% wash on hover. So the stroke is
+ * dropped and the fill is left transparent rather than given the secondary
+ * button's .052 fill — the header row is ghost-style, unlike the settings-page
+ * secondary buttons. The class run is the toolbar family's own signature, so
+ * every instance is covered at once. */
+.bb-app-shell button[class*="border-border bg-transparent px-2 text-xs font-medium"],
+.bb-app-shell button[class*="border-border/70 bg-transparent"] {
+  background-color: transparent !important;
+  border-color: transparent !important;
+}
+
+.bb-app-shell button[class*="border-border bg-transparent px-2 text-xs font-medium"]:hover,
+.bb-app-shell button[class*="border-border/70 bg-transparent"]:hover {
+  background-color: var(--state-hover) !important;
 }
 
 /* ---- Composer (the prompt box) ----------------------------------------
@@ -923,6 +990,15 @@
  * That class string is the family signature, so this matches the icon actions by
  * what they ARE rather than by where they sit.
  *
+ * The match is `size-auto h-8` rather than the longer `size-auto h-8 px-2`
+ * because BB's prompt-stack collapse caret appends `w-6 px-0`
+ * (`PROMPT_STACK_EDGE_CARET_BUTTON_WIDTH_CLASS`), and Tailwind's class merge
+ * drops the conflicting `px-2` — so the rendered class string is
+ * `size-auto h-8 transition-all … w-6 px-0`. Matching the longer run silently
+ * dropped the caret, which is exactly why it stayed a 24x32 rectangle instead of
+ * becoming a circle. `size-auto h-8` survives the merge and is not present on
+ * the option chips (they use `h-8 w-fit …`), so it separates the two families.
+ *
  * Two earlier revisions of this rule both mis-fired, and the fixes are worth
  * keeping in mind:
  *   1. `[aria-label="Prompt actions"]` also matched the dropdown that the button
@@ -935,18 +1011,22 @@
  * ChatGPT gives each of these a 28px circle. Keying off the signature also
  * squares the collapse caret, which BB sizes `w-6 h-8` (a rectangle) via
  * `PROMPT_STACK_EDGE_CARET_BUTTON_WIDTH_CLASS`. */
-.bb-app-shell button[class*="size-auto h-8 px-2"] {
+.bb-app-shell button[class*="size-auto h-8"] {
   width: 1.75rem !important;
   height: 1.75rem !important;
   min-width: 1.75rem !important;
   min-height: 1.75rem !important;
+  /* The collapse caret also carries `w-6` (PROMPT_STACK_EDGE_CARET_BUTTON_WIDTH
+   * _CLASS), which is a width, not padding — the width above already beats it,
+   * but the padding is restated so `px-0`/`px-2` cannot shift the glyph off
+   * centre in either variant. */
   padding: 0 !important;
   border-radius: 9999px !important;
   background-color: transparent !important;
   transition: background-color 150ms ease-out, color 150ms ease-out !important;
 }
 
-.bb-app-shell button[class*="size-auto h-8 px-2"]:hover {
+.bb-app-shell button[class*="size-auto h-8"]:hover {
   background-color: var(--state-hover) !important;
 }
 
