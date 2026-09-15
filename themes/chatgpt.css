@@ -1060,6 +1060,28 @@
   box-shadow: inset 0 0 1px 0 #fff3 !important;
 }
 
+/* ---- Composer submit button -------------------------------------------
+ * BB renders the composer's send control as `bg-foreground text-background`
+ * (an inverted fill) and states the empty composer with `disabled:opacity-50`.
+ * Fading an inverted fill lands on the wrong material in both modes. Light
+ * washes the near-black fill to a mid grey (#8f8f8f) whose canvas icon fades to
+ * #bfbfbf, so the arrow barely separates from the chip it sits on. Dark washes
+ * the white fill to that same light grey, which then becomes the brightest
+ * control in the composer. ChatGPT states the condition on the fill instead: the
+ * send control keeps a real surface and drops to its tertiary icon colour.
+ *
+ * The fill reuses the off-switch wash (10% ink in light, 10% white in dark), so
+ * every inactive control in the composer carries one value, and the icon takes
+ * --muted-foreground, the same tertiary step the rest of the theme uses.
+ * `data-promptbox-submit-action` is the control's own marker, and only a
+ * disabled instance matches, so the stop and voice buttons in that slot keep
+ * their variants. */
+.bb-app-shell [data-promptbox-submit-action]:disabled {
+  background-color: var(--chatgpt-track-off) !important;
+  color: var(--muted-foreground) !important;
+  opacity: 1 !important;
+}
+
 
 /* ---- Header / toolbar icon buttons ------------------------------------
  * BB renders every header and toolbar icon button through
