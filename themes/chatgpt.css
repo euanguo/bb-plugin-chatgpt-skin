@@ -1159,19 +1159,27 @@
  * becoming a circle. `size-auto h-8` survives the merge and is not present on
  * the option chips (they use `h-8 w-fit …`), so it separates the two families.
  *
- * Two earlier revisions of this rule both mis-fired, and the fixes are worth
- * keeping in mind:
+ * This rule has mis-fired three times, and the fixes are worth keeping in mind:
  *   1. `[aria-label="Prompt actions"]` also matched the dropdown that the button
  *      opens (shared label), squashing the menu into a 28px pill.
  *   2. Scoping to `[data-promptbox-standard-actions] button` was worse: the
  *      composer renders its option CHIPS (model, project, branch, permission)
  *      inside that same container, so every chip was forced to 28×28 and lost
  *      its pill. Container scoping is the trap; the signature is the seam.
+ *   3. `COARSE_POINTER_PROMPT_ICON_ACTION_BUTTON_CLASS` is also on the
+ *      composer's submit control. While a run is live, BB swaps the send arrow
+ *      for the stop button, and that button renders through the same class
+ *      constant (`variant="secondary"`, `size-auto h-8 px-2 transition-all`).
+ *      This rule stripped its fill while the submit rule above (line 715) kept
+ *      painting the icon `--canvas`, so the stop button drew a canvas-coloured
+ *      square on the canvas-coloured composer and vanished. Both selectors
+ *      below therefore exclude `[data-promptbox-submit-action]`: the submit
+ *      action is identified by its own marker, never by the shared class run.
  *
  * ChatGPT gives each of these a 28px circle. Keying off the signature also
  * squares the collapse caret, which BB sizes `w-6 h-8` (a rectangle) via
  * `PROMPT_STACK_EDGE_CARET_BUTTON_WIDTH_CLASS`. */
-.bb-app-shell button[class*="size-auto h-8"] {
+.bb-app-shell button[class*="size-auto h-8"]:not([data-promptbox-submit-action]) {
   width: 1.75rem !important;
   height: 1.75rem !important;
   min-width: 1.75rem !important;
@@ -1186,7 +1194,7 @@
   transition: background-color 150ms ease-out, color 150ms ease-out !important;
 }
 
-.bb-app-shell button[class*="size-auto h-8"]:hover {
+.bb-app-shell button[class*="size-auto h-8"]:not([data-promptbox-submit-action]):hover {
   background-color: var(--state-hover) !important;
 }
 
