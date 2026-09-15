@@ -1,3 +1,10 @@
+# Build output — bb rebuilds this from source on install (`bb plugin build`).
+dist/
+
+# Dependencies.
 node_modules/
-*.log
+
+# OS noise.
 .DS_Store
+*.log
+
