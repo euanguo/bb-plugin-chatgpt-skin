@@ -378,6 +378,7 @@
   --chatgpt-track-off: color-mix(in oklab, var(--ink) 10%, transparent);
   --chatgpt-button-secondary: color-mix(in oklab, var(--ink) 5%, transparent);
   --chatgpt-select: #ffffff;
+  --chatgpt-field-border: var(--border);
 
   /* BB derives --sidebar as a 2.2% ink darkening of the canvas, so its sidebar
    * is a step DARKER than the page. ChatGPT's left panel is the opposite: a
@@ -460,6 +461,7 @@
   /* Settings dropdown fill: measured #2a2a2a inside the #232323 card, i.e. a
    * step lighter than the card and still without a stroke. */
   --chatgpt-select: #2a2a2a;
+  --chatgpt-field-border: transparent;
 
   /* Measured alphas, not derived ramp steps. */
   --state-hover: rgba(255, 255, 255, 0.078);
@@ -910,12 +912,19 @@
  * border-input`, which is what makes a BB field read as "the page colour with a
  * box drawn on it". Measured on the settings page: the select inside a group
  * card paints #2a2a2a against the card's #232323, i.e. the control fill over the
- * card, with no visible stroke. */
+ * card, with no visible stroke.
+ *
+ * Dark keeps that edge transparent because the #2d2d2d control fill separates
+ * from the #232323 card by itself. Light cannot: there the control fill is
+ * #ffffff on a #ffffff card, so a transparent edge erases the field and it reads
+ * as bare text on the card. --chatgpt-field-border carries --border in light and
+ * stays transparent in dark, the same split the settings dropdown above uses for
+ * the same reason. */
 .bb-app-shell input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),
 .bb-app-shell textarea,
 .bb-app-shell [data-radix-select-trigger] {
   background-color: var(--chatgpt-control) !important;
-  border-color: transparent !important;
+  border-color: var(--chatgpt-field-border) !important;
 }
 
 .bb-app-shell input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([role=combobox]):focus-visible,
