@@ -1305,3 +1305,27 @@
  * nodes are plugin-owned tooltip panels, so no role-wide override is shipped.
  * This avoids changing unrelated plugin UI until BB exposes a shared tooltip
  * registration hook. */
+
+/* ---- Right-panel Markdown file preview scrolling ----------------------
+ * BB renders a Markdown file preview with a content-height layout: its wrapper
+ * is `@container/page flex min-h-full flex-col`, i.e. it grows to the whole
+ * document height. The host, however, drops that wrapper into the secondary
+ * panel's fill-region — a `min-h-0 flex-1 overflow-hidden` div — so anything
+ * taller than the panel is clipped with no way to scroll (measured live:
+ * content 1859px inside a 923px box, computed overflow-y hidden).
+ *
+ * This restores vertical scrolling for the Markdown file preview only. BB's
+ * file preview wraps every kind in `@container/page`, so that class alone is
+ * not selective enough: the iframe, HTML, CSV, and code previews use
+ * `@container/page flex h-full min-h-0 flex-col` (they size to the panel and
+ * scroll internally), while the Markdown preview is the one that uses
+ * `@container/page flex min-h-full flex-col`. Requiring that `min-h-full
+ * flex-col` signature is what keeps this rule off the other preview types,
+ * the terminal, and the panel's own chrome. `overflow-x: auto` is set too so
+ * wide tables stay reachable. */
+#thread-detail-secondary-panel aside
+  > .flex.min-h-0.flex-1.flex-col.overflow-hidden
+  > .min-h-0.flex-1.overflow-hidden:has(> [class~="@container/page"].flex.min-h-full.flex-col) {
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+}
