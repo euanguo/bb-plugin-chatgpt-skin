@@ -1329,3 +1329,17 @@
   overflow-x: auto !important;
   overflow-y: auto !important;
 }
+
+/* ---- Conversation scroll lane -----------------------------------------
+ * The message list is bb's `thread-scrollbar` (`overflow-y: auto`), and the
+ * centred message column (`mx-auto max-w-[760px]`) is laid out inside its
+ * content box. A layout scrollbar is taken out of that content box, so the
+ * column slides left the moment the conversation grows past the viewport
+ * (measured live: content box 1301px -> 1290px, column centre 971px ->
+ * 965px). `scrollbar-gutter: stable both-edges` reserves the lane whether or
+ * not the bar is showing, and on both edges, so the content box keeps one
+ * width and stays symmetric about the pane: the column neither jumps when the
+ * history grows nor sits off centre while the bar is there. */
+.thread-scrollbar {
+  scrollbar-gutter: stable both-edges !important;
+}
