@@ -1322,9 +1322,19 @@
  * `@container/page flex min-h-full flex-col`. Requiring that `min-h-full
  * flex-col` signature is what keeps this rule off the other preview types,
  * the terminal, and the panel's own chrome. `overflow-x: auto` is set too so
- * wide tables stay reachable. */
+ * wide tables stay reachable.
+ *
+ * How deep that fill-region sits is bb's business, not ours. bb 0.43.4 put a
+ * tab shell in between — `aside > .flex.min-h-0.flex-1.flex-col` >
+ * `.flex.min-h-0.flex-1.flex-col.overflow-hidden` > fill-region — so the
+ * `aside > …` child combinator this rule used to start with matched nothing
+ * and the preview silently reverted to `overflow-y: hidden` (measured live:
+ * the old selector matched 0 nodes while the fill-region sat at 572px with
+ * 1495px of content). Walking down with a descendant combinator follows
+ * whichever wrapper bb interposes; the `:has()` on the next line still
+ * anchors the rule to the Markdown preview's own signature. */
 #thread-detail-secondary-panel aside
-  > .flex.min-h-0.flex-1.flex-col.overflow-hidden
+  .flex.min-h-0.flex-1.flex-col.overflow-hidden
   > .min-h-0.flex-1.overflow-hidden:has(> [class~="@container/page"].flex.min-h-full.flex-col) {
   overflow-x: auto !important;
   overflow-y: auto !important;
