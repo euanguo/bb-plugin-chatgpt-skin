@@ -50,6 +50,14 @@
   --font-sans: "OpenAI Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
 
+  /* ChatGPT's terminal stack (--mono-font-family in its stylesheet). BB's own
+   * default leads with the Nerd Font faces, which the prompts inside BB's
+   * terminal still need; those are kept ahead of the generic fallbacks so
+   * powerline and icon glyphs keep resolving. */
+  --font-terminal: "Berkeley Mono", "JetBrains Mono", "IBM Plex Mono", "Source Code Pro",
+    "JetBrainsMono Nerd Font Mono", "MesloLGS NF", "Symbols Nerd Font Mono",
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+
   /* ---- Corner radius -------------------------------------------------
    * ChatGPT does not use one radius. Every radius is a base times
    * --corner-radius-scale:
@@ -384,8 +392,68 @@
    * is a step DARKER than the page. ChatGPT's left panel is the opposite: a
    * white panel at 70% (measured `color(srgb 1 1 1 / 0.7)` on its ASIDE) sitting
    * slightly LIGHTER than the #f6f6f6 canvas. The 2.2% value is replaced so the
-   * sidebar and the canvas keep ChatGPT's relationship. */
-  --sidebar: color-mix(in oklab, #ffffff 70%, transparent);
+   * sidebar and the canvas keep ChatGPT's relationship.
+   *
+   * Stated as the opaque base colour rather than the measured 70%. BB stacks
+   * this one token on the sidebar root and again on each panel inside it, so
+   * the compound already resolves to the base colour here (#ffffff, measured
+   * live: the sidebar's painted pixels are 255,255,255 and not the 252,252,252
+   * a single 70% white over #f6f6f6 would give). The terminal is what forces
+   * the issue: BB's xterm theme reads `--sidebar` off the root for its
+   * background, and xterm rejects any colour whose alpha is not 255 — the
+   * `color-mix(... transparent)` form computed to `oklab(... / 0.7)`, failed
+   * to parse, and the whole terminal fell back to xterm's own black. */
+  --sidebar: #ffffff;
+
+  /* ---- Terminal ------------------------------------------------------
+   * ChatGPT's desktop terminal does not ship a palette of its own. The xterm
+   * container is rendered with `class="app-theme"`, and that block maps the
+   * VS Code terminal variables onto the app's own accent tokens:
+   *   ansiBlack / BrightBlack = --color-text-foreground-tertiary / -secondary
+   *   ansiRed     = --color-accent-red       ansiGreen  = --color-accent-green
+   *   ansiYellow  = --color-accent-yellow    ansiBlue   = --color-accent-blue
+   *   ansiMagenta = --color-accent-purple    ansiCyan   = --color-accent-blue
+   *   ansiWhite / BrightWhite = --color-text-foreground
+   *   every other Bright*     = the same accent as its base colour
+   * Read out of ChatGPT 26.901.51231
+   * (Contents/Resources/app.asar → webview/assets/app-initial-*.css). The
+   * `.electron-light` block carries its own hex ANSI set, but `.app-theme`
+   * sits on the terminal element itself and therefore wins for the terminal
+   * subtree — so that is the palette the app's terminal actually paints, and
+   * the palette below. Two of its properties are faithful, not oversights:
+   * cyan is the blue accent, and no bright colour brightens its base.
+   *
+   * The four greys are deliberately NOT the app's. `.app-theme` fills them with
+   * the app's TEXT tokens — ansiBlack/White both become the ink, ansiBrightBlack
+   * /-White become 70% washes of it — which is a palette for painting glyphs on
+   * the app's own surfaces, not one that survives being used as the 16 ANSI
+   * slots. The prompt running in this terminal is Powerlevel10k with its stock
+   * colours: DIR is fg254 on bg4, VCS is fg0 on bg2, TIME is fg0 on bg7. So
+   * ANSI 0 has to be a real black to read as the branch name on the green chip
+   * (the app's 50% wash #8d8e8f sat at contrast 1.03 against that green), and
+   * ANSI 7 has to be a real white for the TIME and OS-icon chips that paint it
+   * as a background. The greys therefore follow the conventional slots: black
+   * is the app's ink, white is a near-white, and the app's 50% wash becomes
+   * brightBlack.
+   * The bg-fg pairs are the text colour to use when one of these is painted as
+   * a background; each is black or white, whichever has the higher WCAG
+   * contrast ratio against its swatch. */
+  --ansi-0:  #1a1c1f;  --ansi-bg-fg-0:  #ffffff;
+  --ansi-1:  #e02e2a;  --ansi-bg-fg-1:  #000000;
+  --ansi-2:  #00a240;  --ansi-bg-fg-2:  #000000;
+  --ansi-3:  #ffc300;  --ansi-bg-fg-3:  #000000;
+  --ansi-4:  #339cff;  --ansi-bg-fg-4:  #000000;
+  --ansi-5:  #924ff7;  --ansi-bg-fg-5:  #000000;
+  --ansi-6:  #339cff;  --ansi-bg-fg-6:  #000000;
+  --ansi-7:  #e6e6e6;  --ansi-bg-fg-7:  #1a1c1f;
+  --ansi-8:  #8d8e8f;  --ansi-bg-fg-8:  #000000;
+  --ansi-9:  #e02e2a;  --ansi-bg-fg-9:  #000000;
+  --ansi-10: #00a240;  --ansi-bg-fg-10: #000000;
+  --ansi-11: #ffc300;  --ansi-bg-fg-11: #000000;
+  --ansi-12: #339cff;  --ansi-bg-fg-12: #000000;
+  --ansi-13: #924ff7;  --ansi-bg-fg-13: #000000;
+  --ansi-14: #339cff;  --ansi-bg-fg-14: #000000;
+  --ansi-15: #ffffff;  --ansi-bg-fg-15: #1a1c1f;
 
   /* BB derives --sidebar-accent as an 8% ink mix over the canvas, which is what
    * paints a selected/hovered sidebar row. Measured on ChatGPT's light sidebar,
@@ -478,8 +546,39 @@
    * BB's own dark value is a 4.3% ink-over-canvas mix, which lands near the
    * canvas and reads as "no panel". This must be stated in the .dark block:
    * the light rule sits in `:root, .light`, and `:root` still matches in dark
-   * mode, so leaving it out left the dark sidebar painting the LIGHT value. */
-  --sidebar: color-mix(in oklab, #282828 70%, transparent);
+   * mode, so leaving it out left the dark sidebar painting the LIGHT value.
+   *
+   * Opaque for the same two reasons the light value is: the stacked panels
+   * already resolve to #282828 (measured live: 36,36,36 in the sRGB capture,
+   * identical with and without the alpha), and xterm will not accept an alpha
+   * at all when it reads this token for the terminal background. */
+  --sidebar: #282828;
+
+  /* ---- Terminal ------------------------------------------------------
+   * Same `.app-theme` mapping as the light block; only the accent tokens move
+   * (ChatGPT's dark ramps are the 300/400 steps). See section 2 for the source,
+   * for why cyan is the blue accent, why the bright colours repeat their bases,
+   * and why the four greys follow the conventional ANSI slots instead of the
+   * app's text tokens. The dark greys land on the same values bb's own dark
+   * palette uses for the same reason: the ground #181818 is a real black under
+   * the coloured chips, and brightBlack is the app's 70% white wash (#bfbfbf
+   * over this mode's #282828). */
+  --ansi-0:  #181818;  --ansi-bg-fg-0:  #ffffff;
+  --ansi-1:  #ff6764;  --ansi-bg-fg-1:  #000000;
+  --ansi-2:  #40c977;  --ansi-bg-fg-2:  #000000;
+  --ansi-3:  #ffd240;  --ansi-bg-fg-3:  #000000;
+  --ansi-4:  #339cff;  --ansi-bg-fg-4:  #000000;
+  --ansi-5:  #ad7bf9;  --ansi-bg-fg-5:  #000000;
+  --ansi-6:  #339cff;  --ansi-bg-fg-6:  #000000;
+  --ansi-7:  #dfdfdf;  --ansi-bg-fg-7:  #000000;
+  --ansi-8:  #bfbfbf;  --ansi-bg-fg-8:  #000000;
+  --ansi-9:  #ff6764;  --ansi-bg-fg-9:  #000000;
+  --ansi-10: #40c977;  --ansi-bg-fg-10: #000000;
+  --ansi-11: #ffd240;  --ansi-bg-fg-11: #000000;
+  --ansi-12: #339cff;  --ansi-bg-fg-12: #000000;
+  --ansi-13: #ad7bf9;  --ansi-bg-fg-13: #000000;
+  --ansi-14: #339cff;  --ansi-bg-fg-14: #000000;
+  --ansi-15: #dfdfdf;  --ansi-bg-fg-15: #000000;
 }
 
 /* ===================================================================== */
