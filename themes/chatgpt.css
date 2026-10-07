@@ -637,6 +637,33 @@
   padding: 0.25rem !important;
 }
 
+/* ---- A menu that holds a submenu must not clip it ---------------------
+ * Radix mounts a submenu's popper wrapper as a CHILD of the parent menu's
+ * content element, so the submenu is a fixed-position descendant of the menu.
+ * Left alone that is harmless: the wrapper's containing block is the popper
+ * wrapper above the menu (Radix transforms it), and `overflow:hidden` cannot
+ * clip a descendant whose containing block sits outside the clipper — so the
+ * submenu paints over the page even though the menu box is far too small for
+ * it.
+ *
+ * The frosted rule above is what breaks that. `backdrop-filter`, like
+ * `filter`, makes its element a containing block for fixed descendants, so the
+ * submenu's containing block drops to the menu content itself — and the
+ * content's own `overflow:hidden` (BB's `overflow-hidden` class, there to clip
+ * the menu's rounded corners) then swallows the submenu whole. Measured live on
+ * the file-link menu's "Open in": the submenu mounted with data-state=open at
+ * its correct box (986,714 176x242) and painted nothing at all.
+ *
+ * The blur is the surface the palette is built on, so it stays; the clip is
+ * lifted only while a menu actually holds a submenu. Every other menu keeps
+ * `overflow:hidden`, and the parent menu's own rows never move: BB's 4px menu
+ * padding plus the 15px item radius already follow the container's 20px corner
+ * closely enough that un-clipping shows no edge. */
+[data-radix-popper-content-wrapper] > [role=menu]:has(> [data-radix-popper-content-wrapper]),
+[role=menu][data-radix-menu-content]:has(> [data-radix-popper-content-wrapper]) {
+  overflow: visible !important;
+}
+
 [data-radix-menu-content] [role=menuitem][data-highlighted],
 [data-radix-menu-content] [role=menuitem][data-state=on],
 [data-radix-menu-content] [role=menuitem]:hover {
