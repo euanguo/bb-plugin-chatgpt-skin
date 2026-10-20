@@ -1,6 +1,6 @@
 {
   "name": "bb-plugin-chatgpt-skin",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "A BB palette that reproduces the ChatGPT desktop app's surfaces, typography, and component states.",
   "keywords": [
     "bb",

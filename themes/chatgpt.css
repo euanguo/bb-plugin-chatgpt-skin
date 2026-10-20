@@ -1224,13 +1224,13 @@
   border-radius: 0.78125rem !important; /* 12.5px, ChatGPT's rounded-lg */
 }
 
-/* ---- Window title bar left group --------------------------------------
- * Core puts `--bb-macos-chrome-control-y` on the left title-bar group, shifting
- * the back/forward cluster and the sidebar trigger down by 6px at the 40px
- * title-bar height. The trigger's 28px hover wash therefore sits below centre
- * and crosses the title-bar seam. Cancel the shift on the group; its own
+/* ---- Window title bar groups ------------------------------------------
+ * Core puts `--bb-macos-chrome-control-y` on both direct title-bar groups,
+ * shifting the left cluster and the right panel toggle down by 6px at the 40px
+ * title-bar height. Their 28px hover washes therefore sit below centre and
+ * cross the title-bar seam. Cancel the shift on the groups; their own
  * `items-center` keeps every control on the title-bar centreline. */
-.bb-app-shell [data-testid="app-window-title-bar"] > div:has([data-sidebar="trigger"]) {
+.bb-app-shell [data-testid="app-window-title-bar"] > div {
   transform: none !important;
 }
 
