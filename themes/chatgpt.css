@@ -1224,15 +1224,13 @@
   border-radius: 0.78125rem !important; /* 12.5px, ChatGPT's rounded-lg */
 }
 
-/* ---- Window title bar sidebar trigger ---------------------------------
- * Core translates this one title-bar control down by
- * `--bb-macos-chrome-control-y` (6px at the 40px title-bar height) to follow
- * the macOS traffic lights. The theme's visible hover wash exposes that
- * translation as an unequal top/bottom gap, and the bottom of the 28px button
- * crosses the title-bar seam. The back/forward controls do not carry the
- * translation, so cancel it here and let the bar's `items-center` do the
- * centering. */
-.bb-app-shell [data-testid="app-window-title-bar"] [data-sidebar="trigger"] {
+/* ---- Window title bar left group --------------------------------------
+ * Core puts `--bb-macos-chrome-control-y` on the left title-bar group, shifting
+ * the back/forward cluster and the sidebar trigger down by 6px at the 40px
+ * title-bar height. The trigger's 28px hover wash therefore sits below centre
+ * and crosses the title-bar seam. Cancel the shift on the group; its own
+ * `items-center` keeps every control on the title-bar centreline. */
+.bb-app-shell [data-testid="app-window-title-bar"] > div:has([data-sidebar="trigger"]) {
   transform: none !important;
 }
 
