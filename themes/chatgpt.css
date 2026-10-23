@@ -1274,6 +1274,14 @@
 }
 
 .bb-app-shell [data-tab-pill-close] {
+  /* Do not rely on the host's `size-4`: newer tab containers can stretch the
+   * absolutely positioned close button to the pill height. Locking both axes
+   * keeps the hover target square and matches ChatGPT's 20px affordance. */
+  width: 1.25rem !important;
+  height: 1.25rem !important;
+  min-width: 1.25rem !important;
+  min-height: 1.25rem !important;
+  aspect-ratio: 1;
   border-radius: 0.625rem !important; /* 10px */
 }
 
